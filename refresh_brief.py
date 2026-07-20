@@ -162,6 +162,62 @@ def ri(x):
     return int(round(_f(x)))
 
 
+# ---------------------------------------------------------- methodology stats
+
+def _methodology_stats(per):
+    """Two footnote statistics, computed defensively.
+
+    age_corr   Pearson r between demand velocity and listing age (days on
+               market) - the brief's claim that velocity is ~uncorrelated
+               with tenure.
+    hedonic_r2 R^2 (%) of an OLS hedonic regression of vpd on the listed
+               attributes (log price, log area, rooms, category, district,
+               renovation, new-build) - how little of demand the attributes
+               explain.
+
+    Either key is omitted if it cannot be computed cleanly.
+    """
+    out = {}
+
+    age = per["dom"].where(per["dom"] >= 0)
+    vpd = per["vpd"]
+    m = age.notna() & vpd.notna()
+    if m.sum() > 30 and vpd[m].std() > 0 and age[m].std() > 0:
+        r = float(np.corrcoef(vpd[m].to_numpy(float), age[m].to_numpy(float))[0, 1])
+        if math.isfinite(r):
+            out["age_corr"] = round(r, 2)
+
+    try:
+        hed = per[per["price_c"].notna()
+                  & per["area"].between(AREA_LO, AREA_HI)].copy()
+        if len(hed) >= 100:
+            y = hed["vpd"].to_numpy(dtype=float)
+            cols = [np.ones(len(hed)),
+                    np.log(hed["price_c"].to_numpy(dtype=float)),
+                    np.log(hed["area"].to_numpy(dtype=float))]
+            X = np.column_stack(cols)
+            for col in ("rooms", "category", "district", "renovation"):
+                dummies = pd.get_dummies(hed[col].astype("string"),
+                                         drop_first=True, dummy_na=False)
+                if dummies.shape[1]:
+                    X = np.column_stack([X, dummies.to_numpy(dtype=float)])
+            nb = hed["newbuild"].map({True: 1.0, False: 0.0})
+            X = np.column_stack([X, nb.to_numpy(dtype=float)])
+            ok = np.isfinite(X).all(axis=1) & np.isfinite(y)
+            X, y = X[ok], y[ok]
+            if len(y) >= 100 and y.std() > 0:
+                beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+                resid = y - X @ beta
+                ss_tot = float(((y - y.mean()) ** 2).sum())
+                r2 = 1.0 - float(resid @ resid) / ss_tot if ss_tot > 0 else 0.0
+                if math.isfinite(r2):
+                    out["hedonic_r2"] = round(min(max(r2, 0.0), 1.0) * 100, 1)
+    except Exception:
+        pass
+
+    return out
+
+
 # ---------------------------------------------------------------- build_D
 
 def build_D(df):
@@ -221,6 +277,11 @@ def build_D(df):
                      for d in pd.date_range(first_date, last_date, freq="D")
                      if d not in present]
 
+    # secondary methodology stats. Best-effort: if a stat cannot be computed
+    # cleanly its key is omitted and the prose keeps its static fallback,
+    # rather than failing the whole run over a footnote.
+    meth = _methodology_stats(per)
+
     # ---- daily (normalized view flows; the panel's first date has none)
     daily = {}
     for day, day_rows in df.groupby("snapshot_date"):
@@ -257,6 +318,7 @@ def build_D(df):
         "window_end": last_date.strftime("%Y-%m-%d"),
         "n_snapshot_dates": int(len(snap_dates)),
         "missing_dates": missing_dates,
+        **meth,
     }
 
     # ---- concentration: top/bottom share of summed vpd, ranked by vpd

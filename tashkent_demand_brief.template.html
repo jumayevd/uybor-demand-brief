@@ -280,7 +280,7 @@ footer .disc{font-size:12px;line-height:1.7;max-width:82ch;margin-top:12px}
   <div class="take"><h4>Bottom line</h4><ul>
     <li>Raw views <b>overstate demand at the top</b>: the priciest quintile draws <span data-fig="q5vpd">5.5</span> views/day but converts only <b><span data-fig="q5click">3.1%</span></b> to a click vs <b><span data-fig="q1click">19.4%</span></b> at the bottom.</li>
     <li>The <b>mid-market trough</b> is real on both measures — fewest views and low intent. If you model liquidity, give it its own indicator.</li>
-    <li>Listed attributes explain <b>under 5%</b> of view variance (from a hedonic regression), which is why attention carries information beyond price, size and location — and why it predicts exit.</li>
+    <li>Listed attributes explain <b>under <span data-fig="hedonic">5%</span></b> of view variance (from a hedonic regression), which is why attention carries information beyond price, size and location — and why it predicts exit.</li>
   </ul></div>
 </section>
 
@@ -289,7 +289,7 @@ footer .disc{font-size:12px;line-height:1.7;max-width:82ch;margin-top:12px}
 <footer class="wrap">
   <div><b style="color:var(--ink);font-family:'Fraunces',serif;font-size:16px">Methodology</b></div>
   <p class="disc">
-    Source: <span data-fig="rows">47,801</span> daily listing snapshots scraped from uybor.uz over <span data-fig="windowdm">24 Jun – 13 Jul 2026</span> (<span data-fig="ndays">19</span> snapshot dates; <span data-fig="missinginfo">5 Jul missing</span>), covering <span data-fig="count">3,531</span> unique for-sale listings. Demand is proxied by <em>views</em> and, primarily, by <b>demand velocity</b> — new views gained between snapshots, normalised to a per-day rate; committed demand by <em>clicks</em> and <em>favourites</em>. Velocity correlates just −0.05 with listing age, so it isolates current demand from tenure. “Exit” = a listing present in week one that is absent at the final snapshot (sold, delisted, or expired), computed only for listings observed early enough to have the chance. Prices are advertised list prices in USD, not transaction prices; price and $/m² statistics exclude entries outside \\$3k–\\$5M and areas outside 10–2,000&nbsp;m². Both mean and median are reported throughout: the median describes the typical listing, the mean exposes the long attention tail. District cuts are Tashkent city with ≥25 listings. Figures are listing-side demand signals and should not be read as closed-sale statistics.
+    Source: <span data-fig="rows">47,801</span> daily listing snapshots scraped from uybor.uz over <span data-fig="windowdm">24 Jun – 13 Jul 2026</span> (<span data-fig="ndays">19</span> snapshot dates; <span data-fig="missinginfo">5 Jul missing</span>), covering <span data-fig="count">3,531</span> unique for-sale listings. Demand is proxied by <em>views</em> and, primarily, by <b>demand velocity</b> — new views gained between snapshots, normalised to a per-day rate; committed demand by <em>clicks</em> and <em>favourites</em>. Velocity correlates just <span data-fig="agecorr">−0.05</span> with listing age, so it isolates current demand from tenure. “Exit” = a listing present in week one that is absent at the final snapshot (sold, delisted, or expired), computed only for listings observed early enough to have the chance. Prices are advertised list prices in USD, not transaction prices; price and $/m² statistics exclude entries outside \\$3k–\\$5M and areas outside 10–2,000&nbsp;m². Both mean and median are reported throughout: the median describes the typical listing, the mean exposes the long attention tail. District cuts are Tashkent city with ≥25 listings. Figures are listing-side demand signals and should not be read as closed-sale statistics.
   </p>
 </footer>
 
@@ -434,7 +434,9 @@ new Chart(cTierIntent,{type:'line',data:{labels:tk,datasets:[
     room6views:nf(Math.round((D.by_rooms['6+']||{views_mean:0}).views_mean/100)*100),
     nbpremium:'+'+Math.round((D.by_newbuild['Новостройка'].ppm2_median/D.by_newbuild['Вторичка'].ppm2_median-1)*100)+'%',
     midrange:'$'+Math.round(PT.Q4.lo/1000)+'–'+Math.round(PT.Q4.hi/1000)+'k',
-    q5vpd:f1(PT.Q5.vpd_median), q5click:p1(PT.Q5.click_rate), q1click:p1(PT.Q1.click_rate)
+    q5vpd:f1(PT.Q5.vpd_median), q5click:p1(PT.Q5.click_rate), q1click:p1(PT.Q1.click_rate),
+    agecorr:(O.age_corr<0?'−':'')+Math.abs(O.age_corr).toFixed(2),
+    hedonic:(Math.floor(O.hedonic_r2)+1)+'%'
   };
   document.querySelectorAll('[data-fig]').forEach(el=>{
     const v=F[el.dataset.fig];
