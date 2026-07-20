@@ -179,17 +179,12 @@ footer .disc{font-size:12px;line-height:1.7;max-width:82ch;margin-top:12px}
 <section id="exit">
   <div class="sec-head"><span class="sec-num">03</span><h2>Attention predicts who leaves the market</h2></div>
   <p class="lede">This is the payoff. Over the window, <span class="hl-r"><span data-fig="exitpct">37%</span></span> of listings present in week one disappeared — sold, delisted, or expired. Those exiting listings were pulling <span class="hl-t">~<span data-fig="velratio">5×</span> the daily view velocity</span> of the ones that stayed. <b>Demand, read through views, is a leading indicator of a listing clearing.</b></p>
-  <div class="grid g2">
+  <div class="grid">
     <div class="card">
       <h3>Views/day by outcome</h3>
       <p class="csub">Listings present in week one (n=<span data-fig="exitn">3,290</span>)</p>
       <div class="chart-box"><canvas id="cExit"></canvas></div>
       <div class="legend"><span><i class="dot g"></i>Median</span><span><i class="dot t"></i>Mean</span></div>
-    </div>
-    <div class="card">
-      <h3>Exit rate by property type</h3>
-      <p class="csub">Share of early listings that disappeared</p>
-      <div class="chart-box"><canvas id="cExitCat"></canvas></div>
     </div>
   </div>
   <div class="take"><h4>Reading it</h4><ul>
@@ -227,7 +222,7 @@ footer .disc{font-size:12px;line-height:1.7;max-width:82ch;margin-top:12px}
 </section>
 
 <section id="segments">
-  <div class="sec-head"><span class="sec-num">05</span><h2>Demand by property type</h2></div>
+  <div class="sec-head"><span class="sec-num">05</span><h2>Demand across the apartment stock</h2></div>
   <p class="lede">Bigger homes draw more <em>total</em> eyeballs — <span class="hl-t">6+ room homes average ~<span data-fig="room6views">3,100</span> lifetime views</span> — yet the typical listing’s daily demand is remarkably flat across room counts. <span class="hl-g">Secondary stock outdraws new builds</span> on median velocity despite being cheaper.</p>
   <div class="grid g2">
     <div class="card">
@@ -243,12 +238,7 @@ footer .disc{font-size:12px;line-height:1.7;max-width:82ch;margin-top:12px}
       <div class="legend"><span><i class="dot g"></i>Median views/day</span></div>
     </div>
   </div>
-  <div class="grid g2" style="margin-top:20px">
-    <div class="card">
-      <h3>Demand velocity by category</h3>
-      <p class="csub">Median new views / day</p>
-      <div class="chart-box"><canvas id="cCat"></canvas></div>
-    </div>
+  <div class="grid" style="margin-top:20px">
     <div class="card">
       <h3>Demand by renovation quality</h3>
       <p class="csub">Median new views / day</p>
@@ -256,7 +246,7 @@ footer .disc{font-size:12px;line-height:1.7;max-width:82ch;margin-top:12px}
     </div>
   </div>
   <div class="take"><h4>Reading it</h4><ul>
-    <li><b>Commercial</b> property leads raw demand velocity and turns over fastest; <b>land</b> is the thin, slow end of the market.</li>
+    <li><b>Bigger apartments</b> accumulate more lifetime views but not more views per day — demand velocity is remarkably flat across room counts.</li>
     <li>New builds command a <b><span data-fig="nbpremium">+30%</span> $/m² premium</b> but <em>lower</em> median demand and higher exit — consistent with developer stock cycling through listings rather than clearing to buyers.</li>
   </ul></div>
 </section>
@@ -330,13 +320,6 @@ new Chart(cExit,{type:'bar',data:{labels:['Exited','Still active'],datasets:[
   options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
     plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+' views/day'}}}})});
 
-const catOrder=['Для бизнеса','Дом','Квартира','Земельный участок'];
-const catEN={'Для бизнеса':'Commercial','Дом':'Houses','Квартира':'Apartments','Земельный участок':'Land'};
-const catK=catOrder.filter(k=>D.by_category[k]);
-new Chart(cExitCat,{type:'bar',data:{labels:catK.map(k=>catEN[k]),datasets:[{data:catK.map(k=>Math.round(D.by_category[k].exit_rate*100)),backgroundColor:RUST,borderRadius:6,maxBarThickness:50}]},
-  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),ticks:{callback:v=>v+'%'},title:{display:true,text:'exit rate'}},x:{grid:{display:false}}},
-    plugins:{tooltip:{callbacks:{label:c=>c.raw+'% exited'}}}})});
-
 const dk=Object.keys(D.by_district);
 new Chart(cDistViews,{type:'bar',data:{labels:dk.map(enD),datasets:[
   {label:'Median',data:dk.map(k=>D.by_district[k].vpd_median),backgroundColor:GOLD,borderRadius:4},
@@ -362,11 +345,6 @@ new Chart(cRoomsViews,{type:'bar',data:{labels:rk.map(r=>r+(r==='6+'?'':'-rm')),
 
 new Chart(cNew,{type:'bar',data:{labels:['Secondary','New build'],datasets:[
   {data:[D.by_newbuild['Вторичка'].vpd_median,D.by_newbuild['Новостройка'].vpd_median],backgroundColor:[GOLD,TEAL],borderRadius:6,maxBarThickness:80}]},
-  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
-    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
-
-const cats=catK;
-new Chart(cCat,{type:'bar',data:{labels:cats.map(k=>catEN[k]),datasets:[{data:cats.map(k=>D.by_category[k].vpd_median),backgroundColor:GOLD,borderRadius:6,maxBarThickness:50}]},
   options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
     plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
 

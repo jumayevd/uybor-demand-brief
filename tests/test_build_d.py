@@ -34,6 +34,11 @@ def test_by_district_is_canonical_twelve(D):
     assert set(D["by_district"]) == set(DISTRICTS)
 
 
+def test_apartments_only(D):
+    # every figure is computed on apartments only, so by_category collapses
+    assert list(D["by_category"]) == ["Квартира"]
+
+
 def test_by_newbuild_keys_are_cyrillic(D):
     assert set(D["by_newbuild"]) == {"Вторичка", "Новостройка"}
 

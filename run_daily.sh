@@ -40,6 +40,17 @@ echo "$(date -u +%FT%TZ) refreshing brief..."
   --template "$REPO_DIR/tashkent_demand_brief.template.html" \
   --out "$OUT"
 
+# Render each chart to a dated PNG folder. Requires the render extra:
+#   "$VENV_PY" -m pip install -r requirements-render.txt && "$VENV_PY" -m playwright install chromium
+# Non-fatal: a browser hiccup must not block the brief from publishing.
+if [[ "${RENDER_PICTURES:-1}" == "1" ]]; then
+  echo "$(date -u +%FT%TZ) rendering chart pictures..."
+  "$VENV_PY" "$REPO_DIR/render_charts.py" \
+    --html "$OUT" \
+    --outdir "$REPO_DIR/briefs/$(date -u +%F)" \
+    || echo "$(date -u +%FT%TZ) WARN: chart render failed; brief still produced" >&2
+fi
+
 if [[ -n "${PUBLISH_DIR:-}" ]]; then
   install -m 644 "$OUT" "$PUBLISH_DIR/tashkent_demand_brief.html"
   install -m 644 "$OUT" "$PUBLISH_DIR/index.html"

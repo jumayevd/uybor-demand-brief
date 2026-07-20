@@ -2,21 +2,33 @@
 
 Every morning this repo recomputes the aggregate object `D` from the Uybor
 listing-day panel in Supabase, injects it into
-`tashkent_demand_brief.template.html`, and commits the refreshed
+`tashkent_demand_brief.template.html`, commits the refreshed
 `tashkent_demand_brief.html` (+ `index.html` copy) so GitHub Pages serves the
-updated brief. The charts are Chart.js reading `D` client-side — there is no
-image rendering step anywhere, by design.
+updated brief, and renders each chart to a dated PNG folder
+(`briefs/YYYY-MM-DD/`). The live charts are Chart.js reading `D` client-side;
+the PNGs are produced by loading that same page in headless Chromium and
+exporting each `<canvas>`.
+
+## Scope: apartments only
+
+Every figure in the brief is computed on **apartment (`Квартира`) listings
+only** — houses, commercial, and land are excluded up front in `build_D`. The
+two former cross-category charts (exit rate by type, demand by type) were
+removed since with one category they carry no information.
 
 ## How it works
 
 ```
 Supabase (uybor_listings_v2)          tashkent_demand_brief.template.html
-            │                                        │
+            │  (apartments only)                      │
             ▼                                        │
    refresh_brief.py  ── build_D() ── validate_D() ── inject D + timestamp
+            │                                          │
+            ▼                                          ▼
+   tashkent_demand_brief.html (+ index.html) ──► GitHub Pages
             │
             ▼
-   tashkent_demand_brief.html  (and index.html)  →  GitHub Pages
+   render_charts.py ── headless Chromium ── briefs/YYYY-MM-DD/*.png
 ```
 
 `refresh_brief.py` is deliberately fail-loud: if the DB is unreachable, the
@@ -27,9 +39,9 @@ the currently published brief, it exits non-zero **without touching the
 existing output file** (writes are atomic: temp file + rename).
 
 Metric definitions live at the top of `refresh_brief.py`. They were
-calibrated field-by-field against the published brief: on the reference CSV
-every shared `daily` entry reproduces exactly, and the remaining deltas are
-attributable to the CSV missing the final (Jul 13) snapshot.
+calibrated field-by-field against the originally published (all-category)
+brief before the apartments-only scope was applied; the definitions are
+unchanged, only the input population is now filtered to `Квартира`.
 
 ## Scheduling — GitHub Actions is primary
 
@@ -98,6 +110,27 @@ python refresh_brief.py \
 `--csv` and the DB path produce identical `D` shapes. On success the script
 prints a one-line summary (listings, days, latest date, top-10% share,
 median vpd).
+
+## Chart pictures
+
+`render_charts.py` loads a generated brief in headless Chromium and writes one
+PNG per chart into a dated folder. In CI this runs automatically after each
+refresh; the folders (`briefs/2026-07-20/…`) are committed alongside the HTML,
+so the repo becomes a growing dated image archive (~11 PNGs, ~0.3 MB/day).
+
+Run it locally:
+
+```bash
+pip install -r requirements-render.txt
+python -m playwright install chromium          # one-time browser download
+python render_charts.py \
+  --html tashkent_demand_brief.html \
+  --outdir briefs/2026-07-20
+```
+
+Rendering is **non-fatal** in both the workflow (`continue-on-error`) and
+`run_daily.sh`: a headless-browser hiccup never blocks the brief itself from
+publishing. Set `RENDER_PICTURES=0` to skip it in `run_daily.sh`.
 
 ## Tests
 

@@ -18,7 +18,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +28,13 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-render.txt
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}
 
       - name: Refresh the brief from the live database
         env:
@@ -40,11 +46,21 @@ jobs:
             --out tashkent_demand_brief.html
           cp tashkent_demand_brief.html index.html
 
+      # Render each chart to a dated PNG folder. continue-on-error so a
+      # headless-browser hiccup can never block the brief from publishing.
+      - name: Render charts to dated PNG folder
+        continue-on-error: true
+        run: |
+          python -m playwright install --with-deps chromium
+          python render_charts.py \
+            --html tashkent_demand_brief.html \
+            --outdir "briefs/$(date -u +%F)"
+
       - name: Commit if changed
         run: |
           git config user.name "brief-bot"
           git config user.email "actions@github.com"
-          git add tashkent_demand_brief.html index.html
+          git add tashkent_demand_brief.html index.html briefs
           if git diff --staged --quiet; then
             echo "No data change; nothing to commit."
           else

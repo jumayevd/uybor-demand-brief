@@ -222,6 +222,11 @@ def _methodology_stats(per):
 
 def build_D(df):
     df = df.sort_values(["listing_id", "snapshot_date"], kind="mergesort")
+    # Apartments only: every figure in the brief is computed on Квартира
+    # listings; other categories (house, commercial, land) are excluded.
+    df = df[df["category"] == APARTMENT]
+    if df.empty:
+        raise RefreshError(f"no rows with category == {APARTMENT!r}")
     n_rows = len(df)
     dupes = df.duplicated(["listing_id", "snapshot_date"]).sum()
     if dupes:
