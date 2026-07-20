@@ -312,7 +312,7 @@ new Chart(cVelPer,{type:'line',data:{labels:dl,datasets:[
 const vh=D.vpd_hist, vhk=Object.keys(vh);
 new Chart(cVpdHist,{type:'bar',data:{labels:vhk,datasets:[{data:vhk.map(k=>vh[k]),backgroundColor:vhk.map((k,i)=>i>=5?TEAL:GOLD),borderRadius:5,maxBarThickness:52}]},
   options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'listings'}},x:{grid:{display:false},title:{display:true,text:'new views / day'}}},
-    plugins:{tooltip:{callbacks:{label:c=>c.raw+' listings'}}}})});
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' listings'}}}})});
 
 new Chart(cExit,{type:'bar',data:{labels:['Exited','Still active'],datasets:[
   {label:'Median',data:[D.exit.exited_med_vpd,D.exit.stay_med_vpd],backgroundColor:GOLD,borderRadius:6,maxBarThickness:64},
@@ -346,20 +346,20 @@ new Chart(cRoomsViews,{type:'bar',data:{labels:rk.map(r=>r+(r==='6+'?'':'-rm')),
 new Chart(cNew,{type:'bar',data:{labels:['Secondary','New build'],datasets:[
   {data:[D.by_newbuild['Вторичка'].vpd_median,D.by_newbuild['Новостройка'].vpd_median],backgroundColor:[GOLD,TEAL],borderRadius:6,maxBarThickness:80}]},
   options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
-    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
 
 const rnOrder=['chernovaya','sredniy','kapital','custom','evro'];
 const rnEN={'chernovaya':'Bare/shell','sredniy':'Standard','kapital':'Full reno','custom':'Designer','evro':'Euro-finish'};
 const rnk=rnOrder.filter(k=>D.by_renovation[k]);
 new Chart(cReno,{type:'bar',data:{labels:rnk.map(k=>rnEN[k]),datasets:[{data:rnk.map(k=>D.by_renovation[k].vpd_median),backgroundColor:GOLD,borderRadius:5,maxBarThickness:46}]},
   options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
-    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
 
 const tk=['Q1','Q2','Q3','Q4','Q5'];
 new Chart(cTierDemand,{type:'bar',data:{labels:tk.map(k=>k+' · $'+Math.round(D.price_tiers[k].lo/1000)+'–'+(D.price_tiers[k].hi>1e6?'5M':Math.round(D.price_tiers[k].hi/1000)+'k')),
   datasets:[{data:tk.map(k=>D.price_tiers[k].vpd_median),backgroundColor:tk.map(k=>k==='Q4'?RUST:GOLD),borderRadius:6,maxBarThickness:56}]},
   options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false},ticks:{font:{size:10}}}},
-    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
 
 new Chart(cTierIntent,{type:'line',data:{labels:tk,datasets:[
   {label:'Click rate',data:tk.map(k=>D.price_tiers[k].click_rate),borderColor:TEAL,backgroundColor:TEAL,tension:.3,borderWidth:2.5,pointRadius:4},
@@ -422,6 +422,6 @@ new Chart(cTierIntent,{type:'line',data:{labels:tk,datasets:[
   });
 })();
 </script>
-<!-- generated: 2026-07-20T16:52:35Z UTC -->
+<!-- generated: 2026-07-20T17:09:56Z UTC -->
 </body>
 </html>
