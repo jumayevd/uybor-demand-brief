@@ -211,6 +211,16 @@ def build_D(df):
     per["in_cohort"] = per["first"] <= last_date - pd.Timedelta(days=EXIT_COHORT_DAYS)
     per["exited"] = per["last"] < last_date
 
+    # snapshot-window metadata for the data-driven prose (the browser cannot
+    # derive the window start or missing days from D.daily, which omits the
+    # first snapshot date and any gap days)
+    snap_dates = sorted(pd.to_datetime(df["snapshot_date"].unique()))
+    first_date = snap_dates[0]
+    present = set(snap_dates)
+    missing_dates = [d.strftime("%Y-%m-%d")
+                     for d in pd.date_range(first_date, last_date, freq="D")
+                     if d not in present]
+
     # ---- daily (normalized view flows; the panel's first date has none)
     daily = {}
     for day, day_rows in df.groupby("snapshot_date"):
@@ -243,6 +253,10 @@ def build_D(df):
         "cum_views": ri(per["views_max"].sum()),
         "total_new_views": ri(per["raw_views"].sum()),
         "peak_day": [peak_key, daily[peak_key]],
+        "window_start": first_date.strftime("%Y-%m-%d"),
+        "window_end": last_date.strftime("%Y-%m-%d"),
+        "n_snapshot_dates": int(len(snap_dates)),
+        "missing_dates": missing_dates,
     }
 
     # ---- concentration: top/bottom share of summed vpd, ranked by vpd
