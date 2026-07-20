@@ -1,0 +1,53 @@
+---
+name: daily-brief
+
+on:  # yamllint disable-line rule:truthy
+  schedule:
+    # 02:00 UTC = 07:00 Asia/Tashkent. The scraper writes each day's
+    # snapshot at 20:00 UTC, so the data is ~6 h old when this runs.
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-brief
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh the brief from the live database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}
+        run: |
+          python refresh_brief.py \
+            --template tashkent_demand_brief.template.html \
+            --out tashkent_demand_brief.html
+          cp tashkent_demand_brief.html index.html
+
+      - name: Commit if changed
+        run: |
+          git config user.name "brief-bot"
+          git config user.email "actions@github.com"
+          git add tashkent_demand_brief.html index.html
+          if git diff --staged --quiet; then
+            echo "No data change; nothing to commit."
+          else
+            git commit -m "chore: daily brief refresh $(date -u +%F)"
+            git push
+          fi

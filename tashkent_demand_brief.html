@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tashkent Housing Demand — Views &amp; Attention Brief</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f2233; --ink-2:#33485a; --paper:#f3f1e9; --paper-2:#e9e6da;
+  --card:#fbfaf5; --line:#d9d4c4;
+  --gold:#c58a2b; --gold-soft:#e3b45f;   /* median */
+  --teal:#1f6b7a; --teal-soft:#4b93a1;   /* mean */
+  --rust:#a8442a; --muted:#6b6a5f;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+.hero{padding:64px 0 40px;border-bottom:2px solid var(--ink);position:relative;overflow:hidden}
+.eyebrow{font-family:'Spline Sans Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);font-weight:600}
+.hero h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(38px,6vw,66px);line-height:1.02;margin:14px 0 8px;letter-spacing:-.01em;max-width:15ch}
+.hero .sub{font-size:18px;color:var(--ink-2);max-width:60ch;margin-top:14px}
+.meta{display:flex;flex-wrap:wrap;gap:26px;margin-top:26px;font-family:'Spline Sans Mono',monospace;font-size:12.5px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.thesis{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:40px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.thesis>div{padding:26px 28px}
+.thesis .m-median{background:linear-gradient(180deg,#fbf4e5,#fbfaf5)}
+.thesis .m-mean{border-left:1px solid var(--line);background:linear-gradient(180deg,#eaf2f4,#fbfaf5)}
+.thesis .tag{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+.thesis .m-median .tag{color:var(--gold)} .thesis .m-mean .tag{color:var(--teal)}
+.thesis .big{font-family:'Fraunces',serif;font-size:clamp(34px,5vw,52px);font-weight:600;line-height:1;margin:10px 0 4px}
+.thesis .m-median .big{color:var(--gold)} .thesis .m-mean .big{color:var(--teal)}
+.thesis .note{font-size:13.5px;color:var(--ink-2)}
+.thesis-caption{grid-column:1/-1;border-top:1px solid var(--line);padding:16px 28px;font-size:14px;color:var(--ink-2);background:#fff}
+.thesis-caption b{color:var(--ink)}
+section{padding:52px 0;border-bottom:1px solid var(--line)}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:8px}
+.sec-num{font-family:'Spline Sans Mono',monospace;font-size:13px;color:var(--gold);font-weight:600;padding-top:6px}
+.sec-head h2{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(24px,3.4vw,34px);margin:0;letter-spacing:-.01em}
+.lede{font-size:16.5px;color:var(--ink-2);max-width:72ch;margin:6px 0 26px}
+.lede .hl-g{color:var(--gold);font-weight:600} .lede .hl-t{color:var(--teal);font-weight:600} .lede .hl-r{color:var(--rust);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px}
+.kpi .l{font-family:'Spline Sans Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-family:'Fraunces',serif;font-size:30px;font-weight:600;margin-top:4px;line-height:1}
+.kpi .d{font-size:12.5px;color:var(--ink-2);margin-top:5px}
+.grid{display:grid;gap:20px} .g2{grid-template-columns:1fr 1fr}
+.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:22px 22px 18px}
+.card h3{font-family:'Inter',sans-serif;font-weight:600;font-size:16px;margin:0 0 3px}
+.card .csub{font-size:13px;color:var(--muted);margin:0 0 14px}
+.chart-box{position:relative;height:320px} .chart-box.tall{height:400px}
+.legend{display:flex;gap:18px;margin:14px 0 2px;font-size:12.5px;font-family:'Spline Sans Mono',monospace}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+.dot.g{background:var(--gold)} .dot.t{background:var(--teal)} .dot.c{background:var(--ink-2)} .dot.r{background:var(--rust)}
+.take{background:var(--ink);color:#eef1ea;border-radius:11px;padding:22px 24px;margin-top:22px}
+.take h4{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-soft);margin:0 0 12px;font-weight:600}
+.take ul{margin:0;padding-left:0;list-style:none}
+.take li{padding:8px 0 8px 26px;position:relative;font-size:14.5px;border-top:1px solid rgba(255,255,255,.09)}
+.take li:first-child{border-top:none}
+.take li::before{content:"\2192";position:absolute;left:0;color:var(--gold-soft)}
+.take li b{color:#fff}
+.funnel{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--card)}
+.funnel .stage{padding:24px;text-align:center;border-right:1px solid var(--line);position:relative}
+.funnel .stage:last-child{border-right:none}
+.funnel .fl{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.funnel .fv{font-family:'Fraunces',serif;font-size:clamp(26px,3.6vw,40px);font-weight:600;line-height:1;margin:8px 0 4px}
+.funnel .s1 .fv{color:var(--teal)} .funnel .s2 .fv{color:var(--gold)} .funnel .s3 .fv{color:var(--rust)}
+.funnel .fr{font-size:12.5px;color:var(--ink-2)}
+table.mt{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:4px}
+table.mt th,table.mt td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line)}
+table.mt th:first-child,table.mt td:first-child{text-align:left}
+table.mt thead th{font-family:'Spline Sans Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+table.mt tbody td{font-family:'Spline Sans Mono',monospace}
+table.mt tbody td:first-child{font-family:'Inter',sans-serif;font-weight:500}
+table.mt .g{color:var(--gold);font-weight:600} table.mt .t{color:var(--teal);font-weight:600} table.mt .r{color:var(--rust);font-weight:600}
+footer{padding:44px 0 70px;color:var(--muted);font-size:13px}
+footer .disc{font-size:12px;line-height:1.7;max-width:82ch;margin-top:12px}
+@media(max-width:820px){.g2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.thesis{grid-template-columns:1fr}.thesis .m-mean{border-left:none;border-top:1px solid var(--line)}.funnel{grid-template-columns:1fr}.funnel .stage{border-right:none;border-bottom:1px solid var(--line)}}
+@media print{body{background:#fff}.card,.kpi{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Demand &amp; Attention Brief \u00b7 uybor.uz</div>
+    <h1>Tashkent housing demand, measured in views.</h1>
+    <p class="sub">A demand read on 3,531 active sale listings across greater Tashkent, tracked daily for 19 days. Demand here is <b>attention</b> \u2014 new views a listing earns each day \u2014 and the gap between the <b>typical</b> listing and the <b>average</b> one is where the story lives.</p>
+    <div class="meta">
+      <span><b>3,531</b> unique listings</span>
+      <span><b>47,801</b> daily snapshots</span>
+      <span><b>Jun 24 \u2013 Jul 13, 2026</b> window</span>
+      <span><b>582,979</b> new views tracked</span>
+    </div>
+    <div class="thesis">
+      <div class="m-median">
+        <div class="tag">\u25c6 Median demand</div>
+        <div class="big">5.3 / day</div>
+        <div class="note">The typical listing. Half of all listings earn fewer new views per day than this.</div>
+      </div>
+      <div class="m-mean">
+        <div class="tag">\u25cf Mean demand</div>
+        <div class="big">12.5 / day</div>
+        <div class="note">Lifted 2.4\u00d7 by a thin tail of listings that hoover up the market\u2019s attention.</div>
+      </div>
+      <div class="thesis-caption">
+        The mean sits <b>2.4\u00d7</b> above the median because demand is <b>extremely concentrated</b>: the top 10% of listings capture <b>52.3%</b> of all new views, while the bottom half share just <b>6.1%</b>. Throughout this brief, <b>gold marks the median</b> (the typical home) and <b>teal marks the mean</b> (where the attention piles up).
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="momentum">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Demand momentum over the window</h2></div>
+  <p class="lede">Aggregate demand <span class="hl-t">roughly doubled</span> across the 19 days \u2014 from ~19k new views/day in late June to ~45k by mid-July. But the <em>median</em> listing\u2019s daily gain <span class="hl-g">fell toward 1 view</span> even as the mean climbed past 18. Interest isn\u2019t spreading; it\u2019s <span class="hl-r">funnelling onto fewer listings</span>.</p>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Peak daily new views</div><div class="v">46,099</div><div class="d">Jul 8 \u2014 window high</div></div>
+    <div class="kpi"><div class="l">Mean new views / listing</div><div class="v" style="color:var(--teal)">12.5</div><div class="d">per active listing / day</div></div>
+    <div class="kpi"><div class="l">Median new views / listing</div><div class="v" style="color:var(--gold)">5.3</div><div class="d">typical listing / day</div></div>
+    <div class="kpi"><div class="l">Cumulative views</div><div class="v">5.7M</div><div class="d">across all listings</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card">
+      <h3>Total new views per day</h3>
+      <p class="csub">Aggregate demand entering the market each day</p>
+      <div class="chart-box"><canvas id="cVelTotal"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Per-listing demand: mean vs median</h3>
+      <p class="csub">New views a single listing gains per day</p>
+      <div class="chart-box"><canvas id="cVelPer"></canvas></div>
+      <div class="legend"><span><i class="dot t"></i>Mean</span><span><i class="dot g"></i>Median</span></div>
+    </div>
+  </div>
+  <div class="take"><h4>Reading it</h4><ul>
+    <li>The <b>mean-median divergence widens sharply</b>: aggregate attention rises while the typical listing gets less of it \u2014 a shrinking set of listings absorbs a growing share.</li>
+    <li>The late-window jump in totals is steep enough to <b>flag a data note</b> (a scraper or counter change is possible); the concentration pattern, not the absolute level, is the robust signal.</li>
+  </ul></div>
+</section>
+
+<section id="shape">
+  <div class="sec-head"><span class="sec-num">02</span><h2>The shape of attention</h2></div>
+  <p class="lede">Demand follows a <span class="hl-t">power law</span>. Most listings gather a trickle of views; a few command floods. And attention is overwhelmingly <span class="hl-g">passive</span> \u2014 of 582,979 new views, only 785 became clicks and 203 became saved favourites.</p>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Top 10% of listings</div><div class="v" style="color:var(--teal)">52.3%</div><div class="d">of all new-view flow</div></div>
+    <div class="kpi"><div class="l">Top 25% of listings</div><div class="v" style="color:var(--teal)">77.2%</div><div class="d">of all new-view flow</div></div>
+    <div class="kpi"><div class="l">Bottom 50%</div><div class="v" style="color:var(--gold)">6.1%</div><div class="d">share the scraps</div></div>
+    <div class="kpi"><div class="l">Listings w/ zero clicks</div><div class="v" style="color:var(--rust)">88.7%</div><div class="d">in the whole window</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card">
+      <h3>Distribution of demand velocity</h3>
+      <p class="csub">Listings grouped by new views / day</p>
+      <div class="chart-box"><canvas id="cVpdHist"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>The engagement funnel</h3>
+      <p class="csub">Views convert to intent only rarely</p>
+      <div class="funnel" style="grid-template-columns:1fr;border:none">
+        <div class="stage s1" style="border-right:none;border-bottom:1px solid var(--line)"><div class="fl">Views</div><div class="fv">582,979</div><div class="fr">passive interest</div></div>
+        <div class="stage s2" style="border-right:none;border-bottom:1px solid var(--line)"><div class="fl">Clicks</div><div class="fv">785</div><div class="fr">0.13% of views</div></div>
+        <div class="stage s3" style="border-right:none"><div class="fl">Favourites</div><div class="fv">203</div><div class="fr">0.035% of views \u00b7 intent</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="take"><h4>Reading it</h4><ul>
+    <li>Because clicks and favourites are so scarce (88.7% and 94.9% of listings get none), they are <b>high-signal intent markers</b> \u2014 worth weighting far more heavily than a raw view.</li>
+    <li>A demand index should <b>not sum views, clicks and favourites</b>; they measure different depths of the funnel.</li>
+  </ul></div>
+</section>
+
+<section id="exit">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Attention predicts who leaves the market</h2></div>
+  <p class="lede">This is the payoff. Over the window, <span class="hl-r">37%</span> of listings present in week one disappeared \u2014 sold, delisted, or expired. Those exiting listings were pulling <span class="hl-t">~5\u00d7 the daily view velocity</span> of the ones that stayed. <b>Demand, read through views, is a leading indicator of a listing clearing.</b></p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Views/day by outcome</h3>
+      <p class="csub">Listings present in week one (n=3,290)</p>
+      <div class="chart-box"><canvas id="cExit"></canvas></div>
+      <div class="legend"><span><i class="dot g"></i>Median</span><span><i class="dot t"></i>Mean</span></div>
+    </div>
+    <div class="card">
+      <h3>Exit rate by property type</h3>
+      <p class="csub">Share of early listings that disappeared</p>
+      <div class="chart-box"><canvas id="cExitCat"></canvas></div>
+    </div>
+  </div>
+  <div class="take"><h4>Reading it</h4><ul>
+    <li>Median exiting listing: <b>12.0 views/day</b> vs <b>2.3 views/day</b> for those that stayed. The velocity gap is steep enough to use <b>views/day as a demand-and-liquidity proxy</b> where transaction data is missing.</li>
+    <li>Caveat: exit conflates <b>sold with delisted/expired</b>. To sharpen it, test whether exiting listings cut price in their final snapshots (weak demand) versus disappearing cleanly (likely sold).</li>
+  </ul></div>
+</section>
+
+<section id="geography">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Where demand concentrates</h2></div>
+  <p class="lede">Attention and price pull apart. The pricey central districts \u2014 <span class="hl-t">Mirabad, Yakkasaray</span> \u2014 carry the highest $/m\u00b2 but only <em>middling</em> view velocity, while <span class="hl-g">Shaykhantakhur, Yangihayot and Yunusabad</span> lead on demand per listing. High price does not mean high demand.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Demand velocity by district</h3>
+      <p class="csub">Median new views / day \u00b7 Tashkent, n\u226525</p>
+      <div class="chart-box tall"><canvas id="cDistViews"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Price vs demand by district</h3>
+      <p class="csub">Median $/m\u00b2 (bar) against demand rank</p>
+      <div class="chart-box tall"><canvas id="cDistPrice"></canvas></div>
+    </div>
+  </div>
+  <div style="margin-top:20px" class="card">
+    <h3>District demand table</h3>
+    <p class="csub">Ranked by demand velocity \u00b7 gold = median demand, teal = mean demand</p>
+    <table class="mt" id="tDist"><thead><tr>
+      <th>District</th><th>Listings</th><th>Views/day (med)</th><th>Views/day (mean)</th><th>Median price</th><th>$/m\u00b2</th><th>Exit rate</th><th>Days live</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <div class="take"><h4>Reading it</h4><ul>
+    <li><b>Shaykhantakhur</b> tops demand (7.0 views/day) <em>and</em> shows a high exit rate \u2014 a genuinely hot submarket.</li>
+    <li><b>Yashnabad</b> pairs mid-range prices with the lowest demand velocity in the city (3.4/day) \u2014 a soft-demand pocket worth flagging for repricing.</li>
+  </ul></div>
+</section>
+
+<section id="segments">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Demand by property type</h2></div>
+  <p class="lede">Bigger homes draw more <em>total</em> eyeballs \u2014 <span class="hl-t">6+ room homes average ~3,100 lifetime views</span> \u2014 yet the typical listing\u2019s daily demand is remarkably flat across room counts. <span class="hl-g">Secondary stock outdraws new builds</span> on median velocity despite being cheaper.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Demand by room count</h3>
+      <p class="csub">Lifetime views \u00b7 mean climbs, median steady</p>
+      <div class="chart-box"><canvas id="cRoomsViews"></canvas></div>
+      <div class="legend"><span><i class="dot t"></i>Mean views</span><span><i class="dot g"></i>Median views</span></div>
+    </div>
+    <div class="card">
+      <h3>New build vs secondary</h3>
+      <p class="csub">Median new views / day</p>
+      <div class="chart-box"><canvas id="cNew"></canvas></div>
+      <div class="legend"><span><i class="dot g"></i>Median views/day</span></div>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card">
+      <h3>Demand velocity by category</h3>
+      <p class="csub">Median new views / day</p>
+      <div class="chart-box"><canvas id="cCat"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Demand by renovation quality</h3>
+      <p class="csub">Median new views / day</p>
+      <div class="chart-box"><canvas id="cReno"></canvas></div>
+    </div>
+  </div>
+  <div class="take"><h4>Reading it</h4><ul>
+    <li><b>Commercial</b> property leads raw demand velocity and turns over fastest; <b>land</b> is the thin, slow end of the market.</li>
+    <li>New builds command a <b>+30% $/m\u00b2 premium</b> but <em>lower</em> median demand and higher exit \u2014 consistent with developer stock cycling through listings rather than clearing to buyers.</li>
+  </ul></div>
+</section>
+
+<section id="priceview">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Price versus demand</h2></div>
+  <p class="lede">Across apartment price quintiles, view velocity is <span class="hl-t">U-shaped</span> \u2014 cheap and expensive both draw eyes, the <span class="hl-r">mid-market ($107\u2013157k)</span> is the dead zone. But <em>intent</em> is cleaner: click and favourite rates <span class="hl-g">fall monotonically with price</span>. The top tier\u2019s views are largely aspirational, not buyers.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Demand velocity by price tier</h3>
+      <p class="csub">Median new views/day \u00b7 apartments \u00b7 rust = the trough</p>
+      <div class="chart-box"><canvas id="cTierDemand"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Buyer intent by price tier</h3>
+      <p class="csub">% of listings earning a click / favourite</p>
+      <div class="chart-box"><canvas id="cTierIntent"></canvas></div>
+      <div class="legend"><span><i class="dot t"></i>Click rate</span><span><i class="dot g"></i>Favourite rate</span></div>
+    </div>
+  </div>
+  <div class="take"><h4>Bottom line</h4><ul>
+    <li>Raw views <b>overstate demand at the top</b>: the priciest quintile draws 5.5 views/day but converts only <b>3.1%</b> to a click vs <b>19.4%</b> at the bottom.</li>
+    <li>The <b>mid-market trough</b> is real on both measures \u2014 fewest views and low intent. If you model liquidity, give it its own indicator.</li>
+    <li>Listed attributes explain <b>under 5%</b> of view variance (from a hedonic regression), which is why attention carries information beyond price, size and location \u2014 and why it predicts exit.</li>
+  </ul></div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <div><b style="color:var(--ink);font-family:'Fraunces',serif;font-size:16px">Methodology</b></div>
+  <p class="disc">
+    Source: 47,801 daily listing snapshots scraped from uybor.uz over 24 Jun \u2013 13 Jul 2026 (19 snapshot dates; 5 Jul missing), covering 3,531 unique for-sale listings. Demand is proxied by <em>views</em> and, primarily, by <b>demand velocity</b> \u2014 new views gained between snapshots, normalised to a per-day rate; committed demand by <em>clicks</em> and <em>favourites</em>. Velocity correlates just \u22120.05 with listing age, so it isolates current demand from tenure. \u201cExit\u201d = a listing present in week one that is absent at the final snapshot (sold, delisted, or expired), computed only for listings observed early enough to have the chance. Prices are advertised list prices in USD, not transaction prices; price and $/m\u00b2 statistics exclude entries outside \\$3k\u2013\\$5M and areas outside 10\u20132,000&nbsp;m\u00b2. Both mean and median are reported throughout: the median describes the typical listing, the mean exposes the long attention tail. District cuts are Tashkent city with \u226525 listings. Figures are listing-side demand signals and should not be read as closed-sale statistics.
+  </p>
+</footer>
+
+<script>
+const D = {"daily": {"2026-06-25": {"total_new_views": 18113, "avg_new_views": 7.0, "median_new_views": 6.0, "active_listings": 1855}, "2026-06-26": {"total_new_views": 22915, "avg_new_views": 8.6, "median_new_views": 6.0, "active_listings": 1987}, "2026-06-27": {"total_new_views": 19202, "avg_new_views": 7.3, "median_new_views": 3.0, "active_listings": 1722}, "2026-06-28": {"total_new_views": 19043, "avg_new_views": 7.4, "median_new_views": 3.0, "active_listings": 1897}, "2026-06-29": {"total_new_views": 17558, "avg_new_views": 7.0, "median_new_views": 2.0, "active_listings": 1638}, "2026-06-30": {"total_new_views": 19260, "avg_new_views": 7.7, "median_new_views": 3.0, "active_listings": 2278}, "2026-07-01": {"total_new_views": 23310, "avg_new_views": 9.1, "median_new_views": 2.0, "active_listings": 2368}, "2026-07-02": {"total_new_views": 21074, "avg_new_views": 8.3, "median_new_views": 2.0, "active_listings": 1610}, "2026-07-03": {"total_new_views": 22379, "avg_new_views": 8.9, "median_new_views": 3.0, "active_listings": 1636}, "2026-07-04": {"total_new_views": 23782, "avg_new_views": 9.5, "median_new_views": 3.0, "active_listings": 2388}, "2026-07-06": {"total_new_views": 32986, "avg_new_views": 14.1, "median_new_views": 5.0, "active_listings": 2343}, "2026-07-07": {"total_new_views": 42522, "avg_new_views": 17.9, "median_new_views": 1.0, "active_listings": 1487}, "2026-07-08": {"total_new_views": 46099, "avg_new_views": 19.3, "median_new_views": 1.0, "active_listings": 1432}, "2026-07-09": {"total_new_views": 43464, "avg_new_views": 18.5, "median_new_views": 2.0, "active_listings": 1783}, "2026-07-10": {"total_new_views": 44636, "avg_new_views": 19.1, "median_new_views": 1.0, "active_listings": 1614}, "2026-07-11": {"total_new_views": 45038, "avg_new_views": 19.7, "median_new_views": 1.0, "active_listings": 1365}, "2026-07-12": {"total_new_views": 43071, "avg_new_views": 18.7, "median_new_views": 1.0, "active_listings": 1359}, "2026-07-13": {"total_new_views": 39867, "avg_new_views": 17.4, "median_new_views": 1.0, "active_listings": 1616}}, "overall": {"count": 3531, "rows": 47801, "price_mean": 192038, "price_median": 102000, "ppm2_mean": 1462, "views_mean": 1625, "views_median": 198, "vpd_mean": 12.5, "vpd_median": 5.3, "dom_median": 42, "cum_views": 5739690, "total_new_views": 582979, "peak_day": ["2026-07-08", {"total_new_views": 46099, "avg_new_views": 19.3, "median_new_views": 1.0, "active_listings": 1432}]}, "concentration": {"top10": 52.3, "top25": 77.2, "bottom50": 6.1}, "vpd_hist": {"0-1": 792, "1-2": 550, "2-5": 375, "5-10": 663, "10-20": 523, "20-50": 382, "50+": 246}, "exit": {"exit_rate": 0.366, "exited_med_vpd": 12.0, "exited_mean_vpd": 15.9, "stay_med_vpd": 2.3, "stay_mean_vpd": 9.5, "n": 3290}, "by_category": {"Для бизнеса": {"count": 260, "vpd_median": 7.2, "vpd_mean": 13.6, "views_median": 253, "views_mean": 2587, "price_median": 340000, "ppm2_median": 1813, "exit_rate": 0.492, "dom_median": 43}, "Дом": {"count": 526, "vpd_median": 6.0, "vpd_mean": 12.0, "views_median": 258, "views_mean": 2291, "price_median": 180000, "ppm2_median": 1027, "exit_rate": 0.292, "dom_median": 42}, "Земельный участок": {"count": 181, "vpd_median": 1.5, "vpd_mean": 9.6, "views_median": 144, "views_mean": 254, "price_median": 190000, "ppm2_median": 0, "exit_rate": 0.296, "dom_median": 38}, "Квартира": {"count": 2564, "vpd_median": 4.8, "vpd_mean": 12.7, "views_median": 189, "views_mean": 1488, "price_median": 90000, "ppm2_median": 1513, "exit_rate": 0.373, "dom_median": 41}}, "by_rooms": {"1": {"count": 388, "vpd_median": 4.5, "vpd_mean": 10.8, "views_median": 170, "views_mean": 847, "price_median": 55000, "ppm2_median": 1545, "exit_rate": 0.322, "dom_median": 32}, "2": {"count": 1020, "vpd_median": 5.0, "vpd_mean": 13.3, "views_median": 177, "views_mean": 1267, "price_median": 77500, "ppm2_median": 1464, "exit_rate": 0.376, "dom_median": 40}, "3": {"count": 815, "vpd_median": 5.4, "vpd_mean": 13.5, "views_median": 202, "views_mean": 1772, "price_median": 115000, "ppm2_median": 1467, "exit_rate": 0.386, "dom_median": 42}, "4": {"count": 450, "vpd_median": 5.4, "vpd_mean": 11.2, "views_median": 207, "views_mean": 1891, "price_median": 160000, "ppm2_median": 1500, "exit_rate": 0.373, "dom_median": 43}, "5": {"count": 181, "vpd_median": 5.8, "vpd_mean": 11.2, "views_median": 255, "views_mean": 2182, "price_median": 200000, "ppm2_median": 1176, "exit_rate": 0.28, "dom_median": 43}, "6+": {"count": 225, "vpd_median": 5.9, "vpd_mean": 12.3, "views_median": 294, "views_mean": 3088, "price_median": 300000, "ppm2_median": 1083, "exit_rate": 0.294, "dom_median": 43}, "freeLayout": {"count": 5, "vpd_median": 26.3, "vpd_mean": 25.7, "views_median": 208, "views_mean": 375, "price_median": 85000, "ppm2_median": 933, "exit_rate": 0.667, "dom_median": 25}, "studio": {"count": 6, "vpd_median": 3.8, "vpd_mean": 6.4, "views_median": 182, "views_mean": 2056, "price_median": 61200, "ppm2_median": 1141, "exit_rate": 0.167, "dom_median": 19}}, "by_district": {"Шайхантахурский район": {"count": 155, "vpd_median": 7.0, "vpd_mean": 14.2, "views_median": 242, "views_mean": 2331, "price_median": 160000, "ppm2_median": 1838, "exit_rate": 0.418, "dom_median": 43}, "Янгихаётский район": {"count": 72, "vpd_median": 6.5, "vpd_mean": 13.5, "views_median": 210, "views_mean": 1066, "price_median": 69750, "ppm2_median": 933, "exit_rate": 0.5, "dom_median": 41}, "Юнусабадский район": {"count": 610, "vpd_median": 6.3, "vpd_mean": 18.3, "views_median": 223, "views_mean": 1451, "price_median": 85500, "ppm2_median": 1369, "exit_rate": 0.34, "dom_median": 42}, "Бектемирский район": {"count": 26, "vpd_median": 6.0, "vpd_mean": 8.4, "views_median": 293, "views_mean": 2995, "price_median": 122500, "ppm2_median": 833, "exit_rate": 0.24, "dom_median": 43}, "Алмазарский район": {"count": 68, "vpd_median": 5.8, "vpd_mean": 11.7, "views_median": 253, "views_mean": 1400, "price_median": 122200, "ppm2_median": 1266, "exit_rate": 0.448, "dom_median": 40}, "Сергелийский район": {"count": 93, "vpd_median": 5.8, "vpd_mean": 12.4, "views_median": 177, "views_mean": 993, "price_median": 67000, "ppm2_median": 900, "exit_rate": 0.3, "dom_median": 31}, "Мирзо-Улугбекский район": {"count": 547, "vpd_median": 5.4, "vpd_mean": 11.8, "views_median": 249, "views_mean": 2456, "price_median": 135000, "ppm2_median": 1785, "exit_rate": 0.36, "dom_median": 43}, "Чиланзарский район": {"count": 324, "vpd_median": 5.4, "vpd_mean": 11.0, "views_median": 165, "views_mean": 394, "price_median": 73400, "ppm2_median": 1400, "exit_rate": 0.33, "dom_median": 30}, "Яккасарайский район": {"count": 326, "vpd_median": 5.4, "vpd_mean": 10.7, "views_median": 234, "views_mean": 1968, "price_median": 148500, "ppm2_median": 1854, "exit_rate": 0.417, "dom_median": 43}, "Учтепинский район": {"count": 231, "vpd_median": 5.0, "vpd_mean": 12.3, "views_median": 158, "views_mean": 507, "price_median": 71000, "ppm2_median": 1267, "exit_rate": 0.306, "dom_median": 33}, "Мирабадский район": {"count": 289, "vpd_median": 4.5, "vpd_mean": 12.4, "views_median": 244, "views_mean": 2730, "price_median": 145000, "ppm2_median": 1954, "exit_rate": 0.361, "dom_median": 43}, "Яшнабадский район": {"count": 486, "vpd_median": 3.4, "vpd_mean": 10.2, "views_median": 192, "views_mean": 1830, "price_median": 110000, "ppm2_median": 1493, "exit_rate": 0.406, "dom_median": 43}}, "by_newbuild": {"Вторичка": {"count": 2542, "vpd_median": 5.5, "vpd_mean": 12.3, "views_median": 197, "views_mean": 1511, "price_median": 98000, "ppm2_median": 1359, "exit_rate": 0.346, "dom_median": 41}, "Новостройка": {"count": 989, "vpd_median": 3.6, "vpd_mean": 12.9, "views_median": 198, "views_mean": 1919, "price_median": 119000, "ppm2_median": 1788, "exit_rate": 0.418, "dom_median": 43}}, "by_renovation": {"chernovaya": {"count": 209, "vpd_median": 6.2, "vpd_mean": 12.2, "views_median": 231, "views_mean": 2374, "price_median": 99000, "ppm2_median": 1250, "exit_rate": 0.356, "dom_median": 40}, "custom": {"count": 287, "vpd_median": 6.3, "vpd_mean": 15.7, "views_median": 264, "views_mean": 1759, "price_median": 120000, "ppm2_median": 1495, "exit_rate": 0.416, "dom_median": 42}, "evro": {"count": 1849, "vpd_median": 4.2, "vpd_mean": 12.1, "views_median": 205, "views_mean": 1849, "price_median": 122000, "ppm2_median": 1735, "exit_rate": 0.395, "dom_median": 43}, "kapital": {"count": 240, "vpd_median": 5.8, "vpd_mean": 14.6, "views_median": 206, "views_mean": 1365, "price_median": 70250, "ppm2_median": 1139, "exit_rate": 0.275, "dom_median": 39}, "sredniy": {"count": 784, "vpd_median": 5.4, "vpd_mean": 12.1, "views_median": 173, "views_mean": 1212, "price_median": 77000, "ppm2_median": 1181, "exit_rate": 0.318, "dom_median": 34}}, "price_tiers": {"Q1": {"lo": 4578, "hi": 62000, "vpd_median": 5.3, "click_rate": 19.4, "fav_rate": 9.1, "exit_rate": 0.332}, "Q2": {"lo": 62050, "hi": 80000, "vpd_median": 5.0, "click_rate": 15.0, "fav_rate": 6.5, "exit_rate": 0.331}, "Q3": {"lo": 80500, "hi": 107000, "vpd_median": 4.3, "click_rate": 8.5, "fav_rate": 5.6, "exit_rate": 0.38}, "Q4": {"lo": 107500, "hi": 157000, "vpd_median": 3.2, "click_rate": 6.3, "fav_rate": 4.2, "exit_rate": 0.391}, "Q5": {"lo": 158000, "hi": 5000000, "vpd_median": 5.5, "click_rate": 3.1, "fav_rate": 1.8, "exit_rate": 0.434}}, "funnel": {"views": 582979, "clicks": 785, "favorites": 203}, "zero": {"views_zero": 4.1, "clicks_zero": 88.7, "favs_zero": 94.9}};
+</script>
+<script>
+const GOLD='#c58a2b', TEAL='#1f6b7a', INK='#0f2233', INK2='#33485a', LINE='#d9d4c4', RUST='#a8442a', MUTED='#6b6a5f';
+const FBODY="Inter, sans-serif", FMONO="'Spline Sans Mono', monospace";
+Chart.defaults.font.family=FBODY; Chart.defaults.color=INK2; Chart.defaults.font.size=12;
+const short=s=>s.replace(' \u0440\u0430\u0439\u043e\u043d','').replace('\u0441\u043a\u0438\u0439','.').replace('\u041c\u0438\u0440\u0437\u043e-\u0423\u043b\u0443\u0433\u0431\u0435\u043a','\u041c.-\u0423\u043b\u0443\u0433\u0431\u0435\u043a');
+const EN={'\u0428\u0430\u0439\u0445\u0430\u043d\u0442\u0430\u0445\u0443\u0440\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Shaykhantakhur','\u042f\u043d\u0433\u0438\u0445\u0430\u0451\u0442\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Yangihayot','\u042e\u043d\u0443\u0441\u0430\u0431\u0430\u0434\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Yunusabad','\u0411\u0435\u043a\u0442\u0435\u043c\u0438\u0440\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Bektemir','\u0410\u043b\u043c\u0430\u0437\u0430\u0440\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Almazar','\u0421\u0435\u0440\u0433\u0435\u043b\u0438\u0439\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Sergeli','\u041c\u0438\u0440\u0437\u043e-\u0423\u043b\u0443\u0433\u0431\u0435\u043a\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Mirzo-Ulugbek','\u0427\u0438\u043b\u0430\u043d\u0437\u0430\u0440\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Chilanzar','\u042f\u043a\u043a\u0430\u0441\u0430\u0440\u0430\u0439\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Yakkasaray','\u0423\u0447\u0442\u0435\u043f\u0438\u043d\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Uchtepa','\u041c\u0438\u0440\u0430\u0431\u0430\u0434\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Mirabad','\u042f\u0448\u043d\u0430\u0431\u0430\u0434\u0441\u043a\u0438\u0439 \u0440\u0430\u0439\u043e\u043d':'Yashnabad'};
+const enD=k=>EN[k]||short(k);
+function grid(){return{color:'rgba(15,34,51,.07)',drawBorder:false}}
+function baseOpts(extra={}){return Object.assign({responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{backgroundColor:INK,padding:11,titleFont:{family:FMONO,size:11},bodyFont:{family:FBODY,size:13},cornerRadius:7,boxPadding:4}},
+  animation:{duration:700}},extra)}
+
+const days=Object.keys(D.daily), dl=days.map(d=>d.slice(5));
+new Chart(cVelTotal,{type:'bar',data:{labels:dl,datasets:[{data:days.map(d=>D.daily[d].total_new_views),backgroundColor:TEAL,borderRadius:6,maxBarThickness:40}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),ticks:{callback:v=>(v/1000)+'k'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:8}}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>Math.round(c.raw).toLocaleString()+' new views'}}}})});
+
+new Chart(cVelPer,{type:'line',data:{labels:dl,datasets:[
+  {label:'Mean',data:days.map(d=>D.daily[d].avg_new_views),borderColor:TEAL,backgroundColor:TEAL,tension:.3,borderWidth:2.5,pointRadius:3},
+  {label:'Median',data:days.map(d=>D.daily[d].median_new_views),borderColor:GOLD,backgroundColor:GOLD,tension:.3,borderWidth:2.5,pointRadius:3}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / listing'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:8}}},
+    plugins:{tooltip:{mode:'index',intersect:false}}})});
+
+const vh=D.vpd_hist, vhk=Object.keys(vh);
+new Chart(cVpdHist,{type:'bar',data:{labels:vhk,datasets:[{data:vhk.map(k=>vh[k]),backgroundColor:vhk.map((k,i)=>i>=5?TEAL:GOLD),borderRadius:5,maxBarThickness:52}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'listings'}},x:{grid:{display:false},title:{display:true,text:'new views / day'}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.raw+' listings'}}}})});
+
+new Chart(cExit,{type:'bar',data:{labels:['Exited','Still active'],datasets:[
+  {label:'Median',data:[D.exit.exited_med_vpd,D.exit.stay_med_vpd],backgroundColor:GOLD,borderRadius:6,maxBarThickness:64},
+  {label:'Mean',data:[D.exit.exited_mean_vpd,D.exit.stay_mean_vpd],backgroundColor:TEAL,borderRadius:6,maxBarThickness:64}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+' views/day'}}}})});
+
+const catOrder=['\u0414\u043b\u044f \u0431\u0438\u0437\u043d\u0435\u0441\u0430','\u0414\u043e\u043c','\u041a\u0432\u0430\u0440\u0442\u0438\u0440\u0430','\u0417\u0435\u043c\u0435\u043b\u044c\u043d\u044b\u0439 \u0443\u0447\u0430\u0441\u0442\u043e\u043a'];
+const catEN={'\u0414\u043b\u044f \u0431\u0438\u0437\u043d\u0435\u0441\u0430':'Commercial','\u0414\u043e\u043c':'Houses','\u041a\u0432\u0430\u0440\u0442\u0438\u0440\u0430':'Apartments','\u0417\u0435\u043c\u0435\u043b\u044c\u043d\u044b\u0439 \u0443\u0447\u0430\u0441\u0442\u043e\u043a':'Land'};
+const catK=catOrder.filter(k=>D.by_category[k]);
+new Chart(cExitCat,{type:'bar',data:{labels:catK.map(k=>catEN[k]),datasets:[{data:catK.map(k=>Math.round(D.by_category[k].exit_rate*100)),backgroundColor:RUST,borderRadius:6,maxBarThickness:50}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),ticks:{callback:v=>v+'%'},title:{display:true,text:'exit rate'}},x:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.raw+'% exited'}}}})});
+
+const dk=Object.keys(D.by_district);
+new Chart(cDistViews,{type:'bar',data:{labels:dk.map(enD),datasets:[
+  {label:'Median',data:dk.map(k=>D.by_district[k].vpd_median),backgroundColor:GOLD,borderRadius:4},
+  {label:'Mean',data:dk.map(k=>D.by_district[k].vpd_mean),backgroundColor:TEAL,borderRadius:4}]},
+  options:baseOpts({indexAxis:'y',scales:{x:{grid:grid(),title:{display:true,text:'new views / day'}},y:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+' views/day'}}}})});
+
+new Chart(cDistPrice,{type:'bar',data:{labels:dk.map(enD),datasets:[
+  {label:'$/m\u00b2',data:dk.map(k=>D.by_district[k].ppm2_median),backgroundColor:INK2,borderRadius:4}]},
+  options:baseOpts({indexAxis:'y',scales:{x:{grid:grid(),ticks:{callback:v=>'$'+v}},y:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>'$'+c.raw+' / m\u00b2'}}}})});
+
+const tb=document.querySelector('#tDist tbody');
+dk.forEach(k=>{const r=D.by_district[k];tb.insertAdjacentHTML('beforeend',
+  `<tr><td>${enD(k)}</td><td>${r.count}</td><td class="g">${r.vpd_median}</td><td class="t">${r.vpd_mean}</td><td>$${(r.price_median/1000).toFixed(0)}k</td><td>$${r.ppm2_median}</td><td class="r">${Math.round(r.exit_rate*100)}%</td><td>${r.dom_median}</td></tr>`)});
+
+const rk=['1','2','3','4','5','6+'];
+new Chart(cRoomsViews,{type:'bar',data:{labels:rk.map(r=>r+(r==='6+'?'':'-rm')),datasets:[
+  {label:'Mean views',data:rk.map(k=>D.by_rooms[k].views_mean),backgroundColor:TEAL,borderRadius:5,maxBarThickness:40},
+  {label:'Median views',data:rk.map(k=>D.by_rooms[k].views_median),backgroundColor:GOLD,borderRadius:5,maxBarThickness:40}]},
+  options:baseOpts({scales:{y:{grid:grid(),title:{display:true,text:'lifetime views'}},x:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw.toLocaleString()}}}})});
+
+new Chart(cNew,{type:'bar',data:{labels:['Secondary','New build'],datasets:[
+  {data:[D.by_newbuild['\u0412\u0442\u043e\u0440\u0438\u0447\u043a\u0430'].vpd_median,D.by_newbuild['\u041d\u043e\u0432\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0430'].vpd_median],backgroundColor:[GOLD,TEAL],borderRadius:6,maxBarThickness:80}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
+
+const cats=catK;
+new Chart(cCat,{type:'bar',data:{labels:cats.map(k=>catEN[k]),datasets:[{data:cats.map(k=>D.by_category[k].vpd_median),backgroundColor:GOLD,borderRadius:6,maxBarThickness:50}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
+
+const rnOrder=['chernovaya','sredniy','kapital','custom','evro'];
+const rnEN={'chernovaya':'Bare/shell','sredniy':'Standard','kapital':'Full reno','custom':'Designer','evro':'Euro-finish'};
+const rnk=rnOrder.filter(k=>D.by_renovation[k]);
+new Chart(cReno,{type:'bar',data:{labels:rnk.map(k=>rnEN[k]),datasets:[{data:rnk.map(k=>D.by_renovation[k].vpd_median),backgroundColor:GOLD,borderRadius:5,maxBarThickness:46}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
+
+const tk=['Q1','Q2','Q3','Q4','Q5'];
+new Chart(cTierDemand,{type:'bar',data:{labels:tk.map(k=>k+' \u00b7 $'+Math.round(D.price_tiers[k].lo/1000)+'\u2013'+(D.price_tiers[k].hi>1e6?'5M':Math.round(D.price_tiers[k].hi/1000)+'k')),
+  datasets:[{data:tk.map(k=>D.price_tiers[k].vpd_median),backgroundColor:tk.map(k=>k==='Q4'?RUST:GOLD),borderRadius:6,maxBarThickness:56}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),title:{display:true,text:'new views / day'}},x:{grid:{display:false},ticks:{font:{size:10}}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.raw+' views/day'}}}})});
+
+new Chart(cTierIntent,{type:'line',data:{labels:tk,datasets:[
+  {label:'Click rate',data:tk.map(k=>D.price_tiers[k].click_rate),borderColor:TEAL,backgroundColor:TEAL,tension:.3,borderWidth:2.5,pointRadius:4},
+  {label:'Favourite rate',data:tk.map(k=>D.price_tiers[k].fav_rate),borderColor:GOLD,backgroundColor:GOLD,tension:.3,borderWidth:2.5,pointRadius:4}]},
+  options:baseOpts({scales:{y:{beginAtZero:true,grid:grid(),ticks:{callback:v=>v+'%'},title:{display:true,text:'% of listings'}},x:{grid:{display:false}}},
+    plugins:{tooltip:{mode:'index',intersect:false,callbacks:{label:c=>c.dataset.label+': '+c.raw+'%'}}}})});
+</script>
+</body>
+</html>
