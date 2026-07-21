@@ -2,10 +2,13 @@
 name: daily-brief
 
 on:  # yamllint disable-line rule:truthy
+  # Primary trigger is an external cron (cron-job.org) that calls the
+  # workflow_dispatch API at exactly 07:00 Asia/Tashkent, because GitHub's own
+  # schedule is best-effort and lags the target minute. The schedule below is
+  # only a fallback: it runs an hour later and the gate step skips it when
+  # today's brief already exists (i.e. the precise trigger already fired).
   schedule:
-    # 02:00 UTC = 07:00 Asia/Tashkent. The scraper writes each day's
-    # snapshot at 20:00 UTC, so the data is ~6 h old when this runs.
-    - cron: "0 2 * * *"
+    - cron: "0 3 * * *"   # 08:00 Asia/Tashkent — fallback only
   workflow_dispatch: {}
 
 permissions:
@@ -22,21 +25,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Gate (fallback schedule skips if today is already done)
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] \
+             && [ -d "briefs/$(date -u +%F)" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Today's brief already exists; fallback schedule skipping."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
         run: pip install -r requirements-render.txt
 
       - name: Cache Playwright browser
+        if: steps.gate.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}
 
       - name: Refresh the brief from the live database
+        if: steps.gate.outputs.run == 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}
@@ -49,6 +67,7 @@ jobs:
       # Render each chart to a dated PNG folder. continue-on-error so a
       # headless-browser hiccup can never block the brief from publishing.
       - name: Render charts to dated PNG folder
+        if: steps.gate.outputs.run == 'true'
         continue-on-error: true
         run: |
           python -m playwright install --with-deps chromium
@@ -57,6 +76,7 @@ jobs:
             --outdir "briefs/$(date -u +%F)"
 
       - name: Commit if changed
+        if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "brief-bot"
           git config user.email "actions@github.com"

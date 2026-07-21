@@ -43,15 +43,46 @@ calibrated field-by-field against the originally published (all-category)
 brief before the apartments-only scope was applied; the definitions are
 unchanged, only the input population is now filtered to `Квартира`.
 
-## Scheduling — GitHub Actions is primary
+## Scheduling — precise 07:00 Tashkent via cron-job.org
 
-`.github/workflows/daily-brief.yml` runs at **02:00 UTC (07:00 Tashkent)**
-daily, plus on manual `workflow_dispatch`.
+GitHub's built-in `schedule` is **best-effort and lags** the target minute
+(often 5–60 min at popular times), so it cannot hit 07:00 reliably. The precise
+trigger is therefore external: a free **cron-job.org** job calls GitHub's
+`workflow_dispatch` API at exactly 07:00 Asia/Tashkent; API dispatches start
+immediately. GitHub's own `schedule` is kept only as a fallback (08:00
+Tashkent) and the workflow's *gate* step makes it skip when the day's brief
+already exists — so no duplicate commits.
 
-**Timing:** the scraper stamps each day's snapshot at **20:00 UTC** (01:00
-Tashkent, next calendar day locally). The 02:00 UTC refresh therefore runs
-~6 h after the newest snapshot lands. If the scrape schedule ever moves
-later than ~01:30 UTC, shift the cron accordingly.
+### One-time cron-job.org setup
+
+1. **Create a fine-grained GitHub token** (github.com → Settings → Developer
+   settings → Fine-grained tokens → Generate):
+   - Resource owner: your account; Repository access: **Only**
+     `uybor-demand-brief`.
+   - Permissions → Repository → **Actions: Read and write**.
+   - Copy the token (starts `github_pat_…`).
+2. **Create the cron job** at <https://cron-job.org> (free account):
+   - URL:
+     `https://api.github.com/repos/jumayevd/uybor-demand-brief/actions/workflows/daily-brief.yml/dispatches`
+   - Request method: **POST**
+   - Schedule: **07:00**, every day, timezone **Asia/Tashkent** (cron-job.org
+     lets you pick the timezone — no UTC math needed).
+   - Headers:
+     - `Accept: application/vnd.github+json`
+     - `Authorization: Bearer github_pat_…`  (your token)
+     - `Content-Type: application/json`
+   - Request body: `{"ref":"main"}`
+   - Enable "notify on failure" so you hear about it if a run ever fails.
+3. Save. A successful dispatch returns HTTP **204** (cron-job.org shows it
+   green). The workflow appears in the repo's Actions tab within seconds.
+
+The token is stored in cron-job.org, never in this repo. If you rotate or
+revoke it, update the header there. Scope is minimal (one repo, Actions only),
+so a leak can at most trigger this workflow.
+
+**Data timing:** the scraper stamps each day's snapshot at **20:00 UTC** (01:00
+Tashkent). The 07:00 Tashkent refresh runs ~6 h later, so the freshest snapshot
+is always included.
 
 ### One-time setup (copy-paste)
 
