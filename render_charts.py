@@ -53,10 +53,21 @@ def render(html_path, outdir, scale=2, settle_ms=1200):
         page.wait_for_timeout(settle_ms)  # let the 700ms open-animation finish
 
         ids = page.evaluate("[...document.querySelectorAll('canvas')].map(c=>c.id)")
+        # Chart.js canvases are transparent; composite each onto solid white
+        # so the exported PNG has a white (not black/transparent) background.
+        compose = """(id) => {
+            const c = document.getElementById(id);
+            const t = document.createElement('canvas');
+            t.width = c.width; t.height = c.height;
+            const x = t.getContext('2d');
+            x.fillStyle = '#ffffff';
+            x.fillRect(0, 0, t.width, t.height);
+            x.drawImage(c, 0, 0);
+            return t.toDataURL('image/png');
+        }"""
         for cid in ids:
             name = CHART_FILES.get(cid, cid)
-            data_url = page.evaluate(
-                f"document.getElementById({cid!r}).toDataURL('image/png')")
+            data_url = page.evaluate(compose, cid)
             png = base64.b64decode(data_url.split(",", 1)[1])
             path = os.path.join(outdir, name + ".png")
             with open(path, "wb") as fh:
