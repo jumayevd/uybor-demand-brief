@@ -1,3 +1,29 @@
+<!--
+================================================================================
+LIVE AUTOMATION IN THIS REPO (added on top of the original package)
+================================================================================
+Daily flow (report/daily_report.py):
+  1. pull_supabase.py  — dumps live uybor_listings_v2 -> data/uybor_listings_v2.csv
+                         (v1 20-Jul backfill is the frozen committed CSV)
+  2. build.py          — merges v1+v2, cleans, renders build/metrics.json + 13 PDFs
+  3. send_telegram.py  — for each figure: PNG preview + original PDF -> @chart_automation
+
+Trigger: .github/workflows/report.yml is DISPATCH-ONLY (no GitHub schedule, so
+the channel never gets a duplicate dump). The precise daily run is an external
+cron-job.org job (like the brief) POSTing to:
+  https://api.github.com/repos/jumayevd/uybor-demand-brief/actions/workflows/report.yml/dispatches
+  method POST, body {"ref":"main"}, schedule 07:45 Asia/Tashkent,
+  headers: Accept: application/vnd.github+json ; Authorization: Bearer <PAT> ;
+           Content-Type: application/json
+
+Required GitHub secrets:
+  SUPABASE_DB_URL      Postgres URL (shared with the brief; update on pw change)
+  TELEGRAM_BOT_TOKEN   from @BotFather; the bot must be an ADMIN of @chart_automation
+Optional repo variables: UYBOR_TABLE (default uybor_listings_v2),
+  TELEGRAM_CHAT (default @chart_automation).
+================================================================================
+-->
+
 # Uybor.uz Housing-Demand Report — Automation Package
 
 Turns a daily Uybor.uz listing scrape into the exact numbers and figures used in

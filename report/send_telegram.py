@@ -4,9 +4,10 @@ send_telegram.py — rasterize the built figures to PNG and post them to a
 Telegram channel via the Bot API.
 =======================================================================
 
-Each fig_*.pdf in figures/ is rendered to a PNG and sent as a photo to the
-channel, in a fixed order, with a human caption. A leading header message
-gives the run's window/listing count from build/metrics.json.
+Each fig_*.pdf in figures/ is sent to the channel twice, in a fixed order: a
+rasterized PNG (inline preview, with a human caption) followed by the original
+vector PDF (downloadable document). A leading header message gives the run's
+window/listing count from build/metrics.json.
 
 Env:
   TELEGRAM_BOT_TOKEN   bot token from @BotFather (never hardcode / never logged)
@@ -100,18 +101,26 @@ def main(argv=None):
         _post(token, "sendMessage",
               data={"chat_id": chat, "text": _header(), "parse_mode": "Markdown"})
         for name, caption in present:
+            pdf = os.path.join(FIG_DIR, name + ".pdf")
             png = os.path.join(PNG_DIR, name + ".png")
-            _rasterize(os.path.join(FIG_DIR, name + ".pdf"), png)
+            _rasterize(pdf, png)
+            # PNG preview (inline) ...
             with open(png, "rb") as fh:
                 _post(token, "sendPhoto",
                       data={"chat_id": chat, "caption": caption},
                       files={"photo": fh})
             time.sleep(1)  # stay well under Telegram's rate limits
+            # ... then the original vector PDF as a downloadable document
+            with open(pdf, "rb") as fh:
+                _post(token, "sendDocument",
+                      data={"chat_id": chat},
+                      files={"document": (name + ".pdf", fh, "application/pdf")})
+            time.sleep(1)
     except Exception as exc:
         print(f"SEND FAILED: {exc}", file=sys.stderr)
         return 1
 
-    print(f"[telegram] sent {len(present)} figures to {chat}")
+    print(f"[telegram] sent {len(present)} figures (PNG + PDF) to {chat}")
     return 0
 
 
