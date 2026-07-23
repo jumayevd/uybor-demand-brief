@@ -1,11 +1,14 @@
 ---
 name: uybor-report
 
-# Dispatch-only: the precise 07:00 Asia/Tashkent trigger is the same external
-# cron-job.org caller used for the brief (a second job pointing at this
-# workflow). No `schedule` here on purpose — a delayed GitHub fallback firing
-# after the dispatch would post the whole figure set to Telegram twice.
+# Runs daily on GitHub's schedule at ~08:00 Asia/Tashkent (03:00 UTC), plus
+# manual dispatch for testing. GitHub's scheduler is best-effort and may lag
+# the target time by a few minutes to ~an hour; that's fine for a once-a-day
+# figure post. This is the ONLY automatic trigger (no external cron), so the
+# channel never receives a duplicate set.
 on:  # yamllint disable-line rule:truthy
+  schedule:
+    - cron: "0 3 * * *"   # 08:00 Asia/Tashkent
   workflow_dispatch: {}
 
 permissions:
