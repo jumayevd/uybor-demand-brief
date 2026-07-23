@@ -6,3 +6,11 @@ __pycache__/
 .env
 .pytest_cache/
 *.tmp
+
+# report: live-pulled v2 panel and generated outputs (v1 backfill IS committed)
+report/data/uybor_listings_v2.csv
+report/build/
+report/figures/
+report/figures_png/
+report/png/
+files.zip
