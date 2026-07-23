@@ -54,7 +54,9 @@ FIGURES = [
 ]
 
 API = "https://api.telegram.org/bot{token}/{method}"
-RASTER_SCALE = 2.5  # PDF points -> px multiplier
+RASTER_SCALE = 2.5   # PDF points -> px multiplier
+GAP = 3.5            # seconds between messages (channel limit ~20/min)
+MAX_TRIES = 6        # retries when Telegram rate-limits (HTTP 429)
 
 
 def _rasterize(pdf_path, png_path):
@@ -64,14 +66,31 @@ def _rasterize(pdf_path, png_path):
     doc.close()
 
 
-def _post(token, method, data=None, files=None):
-    r = requests.post(API.format(token=token, method=method),
-                      data=data, files=files, timeout=60)
-    body = r.json()
-    if not body.get("ok"):
+def _api(token, method, data, file_field=None, file_path=None, mime=None):
+    """POST to the Bot API, re-opening any file each attempt and honouring
+    Telegram's 429 `retry_after` back-off."""
+    url = API.format(token=token, method=method)
+    for attempt in range(MAX_TRIES):
+        fh = files = None
+        if file_field:
+            fh = open(file_path, "rb")
+            name = os.path.basename(file_path)
+            files = {file_field: (name, fh, mime) if mime else fh}
+        try:
+            r = requests.post(url, data=data, files=files, timeout=120)
+        finally:
+            if fh:
+                fh.close()
+        body = r.json()
+        if body.get("ok"):
+            return body["result"]
+        if body.get("error_code") == 429:
+            wait = int(body.get("parameters", {}).get("retry_after", 5)) + 2
+            time.sleep(wait)
+            continue
         raise RuntimeError(f"Telegram {method} failed: "
                            f"{body.get('error_code')} {body.get('description')}")
-    return body["result"]
+    raise RuntimeError(f"Telegram {method}: still rate-limited after {MAX_TRIES} tries")
 
 
 def _header():
@@ -98,24 +117,21 @@ def main(argv=None):
 
     os.makedirs(PNG_DIR, exist_ok=True)
     try:
-        _post(token, "sendMessage",
-              data={"chat_id": chat, "text": _header(), "parse_mode": "Markdown"})
+        _api(token, "sendMessage",
+             {"chat_id": chat, "text": _header(), "parse_mode": "Markdown"})
+        time.sleep(GAP)
         for name, caption in present:
             pdf = os.path.join(FIG_DIR, name + ".pdf")
             png = os.path.join(PNG_DIR, name + ".png")
             _rasterize(pdf, png)
             # PNG preview (inline) ...
-            with open(png, "rb") as fh:
-                _post(token, "sendPhoto",
-                      data={"chat_id": chat, "caption": caption},
-                      files={"photo": fh})
-            time.sleep(1)  # stay well under Telegram's rate limits
+            _api(token, "sendPhoto", {"chat_id": chat, "caption": caption},
+                 file_field="photo", file_path=png)
+            time.sleep(GAP)
             # ... then the original vector PDF as a downloadable document
-            with open(pdf, "rb") as fh:
-                _post(token, "sendDocument",
-                      data={"chat_id": chat},
-                      files={"document": (name + ".pdf", fh, "application/pdf")})
-            time.sleep(1)
+            _api(token, "sendDocument", {"chat_id": chat},
+                 file_field="document", file_path=pdf, mime="application/pdf")
+            time.sleep(GAP)
     except Exception as exc:
         print(f"SEND FAILED: {exc}", file=sys.stderr)
         return 1
