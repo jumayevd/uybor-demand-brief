@@ -1,29 +1,3 @@
-<!--
-================================================================================
-LIVE AUTOMATION IN THIS REPO (added on top of the original package)
-================================================================================
-Daily flow (report/daily_report.py):
-  1. pull_supabase.py  — dumps live uybor_listings_v2 -> data/uybor_listings_v2.csv
-                         (v1 20-Jul backfill is the frozen committed CSV)
-  2. build.py          — merges v1+v2, cleans, renders build/metrics.json + 13 PDFs
-  3. send_telegram.py  — for each figure: PNG preview + original PDF -> @chart_automation
-
-Trigger: .github/workflows/report.yml is DISPATCH-ONLY (no GitHub schedule, so
-the channel never gets a duplicate dump). The precise daily run is an external
-cron-job.org job (like the brief) POSTing to:
-  https://api.github.com/repos/jumayevd/uybor-demand-brief/actions/workflows/report.yml/dispatches
-  method POST, body {"ref":"main"}, schedule 07:45 Asia/Tashkent,
-  headers: Accept: application/vnd.github+json ; Authorization: Bearer <PAT> ;
-           Content-Type: application/json
-
-Required GitHub secrets:
-  SUPABASE_DB_URL      Postgres URL (shared with the brief; update on pw change)
-  TELEGRAM_BOT_TOKEN   from @BotFather; the bot must be an ADMIN of @chart_automation
-Optional repo variables: UYBOR_TABLE (default uybor_listings_v2),
-  TELEGRAM_CHAT (default @chart_automation).
-================================================================================
--->
-
 # Uybor.uz Housing-Demand Report — Automation Package
 
 Turns a daily Uybor.uz listing scrape into the exact numbers and figures used in
@@ -136,32 +110,32 @@ a housing-demand proxy. Two are *attention-side*, two are *outcome-side*.
 
 ---
 
-## The 13 figures
+## The 11 figures (aynan paperdagidek)
 
-Colour language: **gold** = median/typical, **teal** = mean/breadth,
-**rust** = trough/soft, **purple** = index/duration.
+Bu 11 ta figura paperda ishlatiladigan aniq to'plamdir. `build.py` faqat shularni
+yaratadi va boshqasini emas (verify bosqichi buni tekshiradi). Rang tili:
+**gold** = mediana/tipik, **teal** = o'rtacha/kenglik, **rust** = pastlik/past,
+**purple** = indeks/davomiylik. Barcha matn Uzbek lotinda; inglizcha texnik
+atamalar figurada saqlanadi (VPD, reach).
 
-| # | File | What it shows | Key metrics.json inputs |
-|---|------|---------------|--------------------------|
-| 1 | `fig_evidence_map` | The 4 signals + the studies validating each | (static, from literature) |
-| 2 | `fig_concentration_apartments` | Velocity distribution + top-decile share | `med_vpd, mean_vpd, top10/25, bot50`; `L.vpd` |
-| 3 | `fig_s1_dimensions` | Velocity by rooms / build type / day-of-week | `rooms_dims, nb_sec, nb_new, dow` |
-| 4 | `fig_funnel_apartments` | Views → clicks → favorites attrition | `tot_views, tot_clicks, tot_favs` |
-| 5 | `fig_wedge_apartments` | Velocity vs intent by price quintile | `quintiles` |
-| 6 | `fig_intent_norm_districts` | Normalized click/fav incidence by district | `intent_norm` |
-| 7 | `fig_s2_dimensions` | Intent by rooms / day-of-week | `rooms_dims, dow` |
-| 8 | `fig_exit_apartments` | Velocity gap (exit vs stay) + renewal wall | `vpd_exit/stay/exit_gap, exit_*_pct, vpd_*_exit` |
-| 9 | `fig_exit_dims` | Exit rate by district / rooms | `districts[*].absorp, exit_rooms` |
-| 10 | `fig_tom_dims` | ToM term-wall + stock age by district / rooms | `districts[*].age, age_rooms`; `L.tom_completed` |
-| 11 | `fig_metrics_panel_apartments` | District heatmap of the 4 framework signals | `districts, intent_norm` |
-| 12 | `fig_supply_demand_bands` | Supply bars vs demand line by price band | `bands` |
-| 13 | `fig_demand_map` | Bubble map (size=stock, colour=percentile) + ranked panel | `districts, vpct, map_pos2, map_rad2` |
+| # | Fayl | Nima ko'rsatadi | Asosiy metrics.json kalitlari |
+|---|------|-----------------|-------------------------------|
+| 1 | `fig_concentration_apartments` | Tezlik taqsimoti + top-decile ulushi | `med_vpd, mean_vpd, top10/25, bot50`; `L.vpd` |
+| 2 | `fig_s1_dimensions` | Tezlik: xonalar / bino turi / hafta kuni | `rooms_dims, nb_sec, nb_new, dow` |
+| 3 | `fig_wedge_apartments` | Narx kvintili bo'yicha tezlik vs niyat | `quintiles` |
+| 4 | `fig_demand_map` | Talab xaritasi: o'lcham = reach, bir xil rang, o'ng panel | `districts[*].reach, centroids` |
+| 5 | `fig_intent_norm_districts` | Tuman bo'yicha normalangan niyat + o'rtacha chiziq | `intent_norm` |
+| 6 | `fig_s2_dimensions` | Niyat: xonalar / hafta kuni | `rooms_dims, dow` |
+| 7 | `fig_exit_apartments` | Chiqish tezlik farqi + 43-kun dekompozitsiya | `vpd_exit/stay/exit_gap, exit_*_pct, vpd_*_exit` |
+| 8 | `fig_exit_dims` | Chiqish darajasi: tuman / xonalar + o'rtacha | `districts[*].absorp, exit_rooms` |
+| 9 | `fig_tom_dims` | Zaxira yoshi: tuman / xonalar (43-kun spike yo'q) | `districts[*].age, age_rooms` |
+| 10 | `fig_metrics_panel_apartments` | To'rt signal issiqlik xaritasi + o'rtacha qatori | `districts, intent_norm` |
+| 11 | `fig_supply_demand_bands` | Narx oralig'i bo'yicha taklif vs talab | `bands` |
 
-The paper uses figures 1–13 except `fig_exit_apartments` and one of the
-dimension panels are optional; include/exclude in LaTeX as needed. All 13 are
-regenerated every run.
+Paper ularni filename bilan chaqiradi (papka yo'q), shuning uchun `figures/`dagi
+PDF'larni `paper_uz.tex` yoniga ko'chiring yoki preambulada `\graphicspath{{figures/}}`
+ishlating.
 
----
 
 ## Reproducibility notes
 

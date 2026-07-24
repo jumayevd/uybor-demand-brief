@@ -1,14 +1,14 @@
 ---
 name: uybor-report
 
-# Runs daily on GitHub's schedule at ~08:00 Asia/Tashkent (03:00 UTC), plus
-# manual dispatch for testing. GitHub's scheduler is best-effort and may lag
-# the target time by a few minutes to ~an hour; that's fine for a once-a-day
-# figure post. This is the ONLY automatic trigger (no external cron), so the
-# channel never receives a duplicate set.
+# Runs daily on GitHub's schedule at ~06:00 Asia/Tashkent (01:00 UTC), plus
+# manual dispatch (used for the run-on-start today and for testing). GitHub's
+# scheduler is best-effort and may lag the target time by a few minutes to
+# ~an hour; that's fine for a once-a-day figure post. This is the ONLY
+# automatic trigger (no external cron), so the channel never gets duplicates.
 on:  # yamllint disable-line rule:truthy
   schedule:
-    - cron: "0 3 * * *"   # 08:00 Asia/Tashkent
+    - cron: "0 1 * * *"   # 06:00 Asia/Tashkent
   workflow_dispatch: {}
 
 permissions:

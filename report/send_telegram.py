@@ -36,21 +36,19 @@ FIG_DIR = os.path.join(HERE, "figures")
 PNG_DIR = os.path.join(HERE, "figures_png")
 METRICS = os.path.join(HERE, "build", "metrics.json")
 
-# fixed send order + caption per figure (only those present are sent)
+# fixed send order + Uzbek caption per figure (the exact 11 paper figures)
 FIGURES = [
-    ("fig_evidence_map", "Four listing signals validated as demand proxies"),
-    ("fig_concentration_apartments", "Demand velocity: distribution & top-decile share"),
-    ("fig_s1_dimensions", "View velocity by rooms / build type / day-of-week"),
-    ("fig_funnel_apartments", "Attention funnel: views → clicks → favorites"),
-    ("fig_wedge_apartments", "Velocity vs intent by price quintile"),
-    ("fig_intent_norm_districts", "Normalized click/favorite incidence by district"),
-    ("fig_s2_dimensions", "Intent by rooms / day-of-week"),
-    ("fig_exit_apartments", "Exit velocity gap + renewal-wall decomposition"),
-    ("fig_exit_dims", "Exit rate by district / rooms"),
-    ("fig_tom_dims", "Time-on-market wall + stock age by district / rooms"),
-    ("fig_metrics_panel_apartments", "District heatmap of the four demand signals"),
-    ("fig_supply_demand_bands", "Supply vs demand by price band"),
-    ("fig_demand_map", "District demand bubble map + ranked panel"),
+    ("fig_concentration_apartments", "Talab tezligi taqsimoti va yuqori 10% ulushi"),
+    ("fig_s1_dimensions", "Tezlik: xonalar soni / bino turi / hafta kuni"),
+    ("fig_wedge_apartments", "Narx kvintili bo'yicha tezlik va niyat"),
+    ("fig_demand_map", "Talab xaritasi: doira o'lchami = qamrov (reach)"),
+    ("fig_intent_norm_districts", "Tumanlar bo'yicha normalangan niyat"),
+    ("fig_s2_dimensions", "Niyat: xonalar soni / hafta kuni"),
+    ("fig_exit_apartments", "Chiqish tezlik farqi va 43-kunlik dekompozitsiya"),
+    ("fig_exit_dims", "Chiqish darajasi: tuman / xonalar soni"),
+    ("fig_tom_dims", "Zaxira yoshi: tuman / xonalar soni"),
+    ("fig_metrics_panel_apartments", "To'rt talab signali issiqlik xaritasi"),
+    ("fig_supply_demand_bands", "Narx oralig'i bo'yicha taklif va talab"),
 ]
 
 API = "https://api.telegram.org/bot{token}/{method}"
@@ -95,11 +93,11 @@ def _api(token, method, data, file_field=None, file_path=None, mime=None):
 
 def _header():
     if not os.path.exists(METRICS):
-        return "Uybor apartments — daily demand figures"
+        return "Uybor kvartiralar — kunlik talab figuralari"
     w = json.load(open(METRICS, encoding="utf-8"))["window"]
-    return ("📊 *Uybor apartments — daily demand figures*\n"
+    return ("📊 *Uybor kvartiralar — kunlik talab figuralari*\n"
             f"{w['date_min']} → {w['date_max']}  ·  "
-            f"{w['n_listings']:,} listings  ·  {w['n_days']} snapshots")
+            f"{w['n_listings']:,} e'lon  ·  {w['n_days']} kesim")
 
 
 def main(argv=None):

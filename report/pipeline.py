@@ -225,6 +225,7 @@ def metrics(apt, L):
         ag = act[act.district_en == d].age.median()
         comp_d = ld.loc[ld.exited & ld.tom_completed.ge(0), "tom_completed"].median()
         dd[d] = dict(vpd=round(float(ld.vpd.median()), 1),
+                     reach=int(ld.nv.sum()),
                      absorp=round(float(exr), 0),
                      age=round(float(ag), 0),
                      tom=round(float(comp_d), 0) if pd.notna(comp_d) else None,
