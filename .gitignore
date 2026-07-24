@@ -13,4 +13,4 @@ report/build/
 report/figures/
 report/figures_png/
 report/png/
-files.zip
+*.zip
