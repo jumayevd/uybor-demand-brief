@@ -49,18 +49,18 @@ PRICE_BANDS = [0, 30_000, 50_000, 75_000, 100_000, 150_000, 250_000, 1e9]
 PRICE_BAND_LABELS = ["<30k", "30-50k", "50-75k", "75-100k",
                      "100-150k", "150-250k", "250k+"]
 
-# Russian district name -> English label (12 Tashkent city districts)
+# Russian district name -> Uzbek (Latin) label (12 Tashkent city districts)
 DISTRICT_MAP = {
-    "Шайхантахурский район": "Shaykhantakhur",
-    "Юнусабадский район":    "Yunusabad",
-    "Янгихаётский район":    "Yangihayot",
-    "Бектемирский район":    "Bektemir",
-    "Сергелийский район":    "Sergeli",
-    "Алмазарский район":     "Almazar",
-    "Мирзо-Улугбекский район": "Mirzo-Ulugbek",
-    "Чиланзарский район":    "Chilanzar",
-    "Яккасарайский район":   "Yakkasaray",
-    "Учтепинский район":     "Uchtepa",
-    "Мирабадский район":     "Mirabad",
-    "Яшнабадский район":     "Yashnabad",
+    "Шайхантахурский район":   "Shayxontohur",
+    "Юнусабадский район":      "Yunusobod",
+    "Янгихаётский район":      "Yangihayot",
+    "Бектемирский район":      "Bektemir",
+    "Сергелийский район":      "Sirg'ali",
+    "Алмазарский район":       "Olmazor",
+    "Мирзо-Улугбекский район": "Mirzo Ulug'bek",
+    "Чиланзарский район":      "Chilonzor",
+    "Яккасарайский район":     "Yakkasaroy",
+    "Учтепинский район":       "Uchtepa",
+    "Мирабадский район":       "Mirobod",
+    "Яшнабадский район":       "Yashnobod",
 }

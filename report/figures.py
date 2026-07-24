@@ -183,7 +183,7 @@ def build_wedge_apartments():
                 color=GOLD, fontweight="bold")
     a2.set_xticks(x); a2.set_xticklabels(qlab, fontsize=8.3)
     a2.set_ylabel("e'lonlar ulushi, %"); a2.set_ylim(0, 32)
-    a2.set_title("(b)  Intent: narx oshgani sari kamayadi",
+    a2.set_title("(b)  Niyat: narx oshgani sari kamayadi",
                  fontsize=11, fontweight="bold", loc="left")
     a2.legend(frameon=False, fontsize=9)
     plt.tight_layout()
@@ -219,7 +219,7 @@ def build_intent_norm_districts():
             fontsize=7.5, color="#a07d2e", ha="right", fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels(order, rotation=32, ha="right", fontsize=8.6)
     ax.set_ylabel("tuman e'lonlari ulushi, %"); ax.set_ylim(0, 32)
-    ax.set_title("Tuman bo'yicha intent (normalangan): bosish yoki saqlash olgan e'lonlar ulushi",
+    ax.set_title("Tuman bo'yicha niyat (normalangan): bosish yoki saqlash olgan e'lonlar ulushi",
                  fontsize=11.5, fontweight="bold", loc="left")
     ax.legend(frameon=False, fontsize=9, loc="upper right")
     plt.tight_layout()
@@ -243,7 +243,7 @@ def build_s2_dimensions():
                 color=GOLD, fontweight="bold")
     a1.set_xticks(x); a1.set_xticklabels([f"{k}-xona" for k in ks])
     a1.set_ylabel("e'lonlar ulushi, %"); a1.set_ylim(0, 18.5)
-    a1.set_title("(a)  Xonalar soni bo'yicha intent",
+    a1.set_title("(a)  Xonalar soni bo'yicha niyat",
                  fontsize=10.5, fontweight="bold", loc="left")
     a1.legend(frameon=False, fontsize=8.5)
     ck = [R["dow"][d]["cpk"] for d in DOW_KEYS]
@@ -256,8 +256,8 @@ def build_s2_dimensions():
         a2.text(i + w / 2, fk[i] + 0.4, f"{fk[i]:.1f}", ha="center", fontsize=7.6,
                 color=GOLD, fontweight="bold")
     a2.set_xticks(range(7)); a2.set_xticklabels(DAYS_UZ)
-    a2.set_ylabel("intent / 1000 e'lon-kun"); a2.set_ylim(0, 22.5)
-    a2.set_title("(b)  Hafta kuni bo'yicha intent",
+    a2.set_ylabel("niyat / 1000 e'lon-kun"); a2.set_ylim(0, 22.5)
+    a2.set_title("(b)  Hafta kuni bo'yicha niyat",
                  fontsize=10.5, fontweight="bold", loc="left")
     a2.legend(frameon=False, fontsize=8.5)
     plt.tight_layout()
@@ -501,7 +501,7 @@ def build_demand_map():
         axm.add_patch(e)
     for k in cc:
         rr = rad[k]
-        below = {"Shaykhantakhur", "Mirabad", "Yakkasaray"}
+        below = {"Shayxontohur", "Mirobod", "Yakkasaroy"}
         if k in below:
             axm.text(posd[k][0], posd[k][1] - rr - 0.006, k, ha="center", va="top",
                      fontsize=9.3, fontweight="bold", color=INK, zorder=5)
@@ -562,7 +562,7 @@ def build_supply_demand_bands():
         ax2.text(i + 0.08, dv + 0.25, f"{dv}", fontsize=9, color=RUST, fontweight="bold")
     ax2.set_ylabel("Mediana yangi ko'rishlar / kun (talab)", color=RUST, fontsize=10)
     ax2.tick_params(axis="y", colors=RUST); ax2.set_ylim(0, 11.5)
-    ax1.set_title("Taklif $50\u2013150k oralig'ida to'plangan; talab $30k dan pastda cho'qqida",
+    ax1.set_title("Taklif \\$50\u2013150k oralig'ida to'plangan; talab \\$30k dan pastda cho'qqida",
                   fontsize=12, fontweight="bold", loc="left", pad=12)
     fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
     plt.tight_layout()
