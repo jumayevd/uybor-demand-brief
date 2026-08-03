@@ -60,11 +60,11 @@ def build_concentration_apartments():
     a1.axvline(mean, color=TEAL, lw=2.2)
     a1.text(med * 0.9, a1.get_ylim()[1] * 0.92, f"mediana {med:.1f}\ntipik e'lon",
             color=GOLD, fontsize=8.5, fontweight="bold", ha="right")
-    a1.text(mean * 1.1, a1.get_ylim()[1] * 0.74, f"o'rtacha {mean:.1f}\n\"dum\" tortadi",
+    a1.text(mean * 1.1, a1.get_ylim()[1] * 0.74, f"o'rtacha {mean:.1f}\ndum ta'sirida",
             color=TEAL, fontsize=8.5, fontweight="bold")
     a1.set_xlabel("kunlik yangi ko'rishlar (log shkala)")
     a1.set_ylabel("e'lonlar soni")
-    a1.set_title("(a)  Ko'pchilik oz, ozchilik ko'p e'tibor oladi",
+    a1.set_title("(a)  Kunlik e'tibor taqsimoti: og'ir dumli",
                  fontsize=10.5, fontweight="bold", loc="left")
     vals = [R["top10"], R["top25"], R["bot50"]]
     b = a2.bar(["Yuqori 10%", "Yuqori 25%", "Quyi 50%"], vals,
@@ -73,9 +73,9 @@ def build_concentration_apartments():
         a2.text(bar.get_x() + bar.get_width() / 2, val + 1.5, f"{val}%",
                 ha="center", fontweight="bold", fontsize=11)
     a2.set_ylabel("barcha yangi ko'rishlar ulushi, %")
-    a2.set_ylim(0, 90)
-    a2.set_xlabel("e'tibor bo'yicha saralangan e'lonlar")
-    a2.set_title("(b)  E'tibor qayerga to'planadi",
+    a2.set_ylim(0, max(vals) * 1.18)
+    a2.set_xlabel("e'tibor darajasi bo'yicha saralangan e'lonlar")
+    a2.set_title("(b)  E'tibor konsentratsiyasi",
                  fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
     plt.savefig(out("fig_concentration_apartments.pdf"), bbox_inches="tight")
@@ -93,17 +93,17 @@ def build_s1_dimensions():
         axs[0].text(bar.get_x() + bar.get_width() / 2, val + 0.08, f"{val}",
                     ha="center", fontweight="bold", fontsize=10)
     axs[0].set_ylabel("mediana yangi ko'rishlar / kun")
-    axs[0].set_ylim(0, 6.5)
-    axs[0].set_title("(a)  Xonalar soni bo'yicha tezlik",
+    axs[0].set_ylim(0, max(vals) * 1.22)
+    axs[0].set_title("(a)  Xonalar soni bo'yicha talab tezligi",
                      fontsize=10.5, fontweight="bold", loc="left")
-    b = axs[1].bar(["Ikkilamchi", "Yangi qurilish"], [R["nb_sec"], R["nb_new"]],
-                   color=[GOLD, TEAL], width=0.5)
-    for bar, val in zip(b, [R["nb_sec"], R["nb_new"]]):
+    nb = [R["nb_sec"], R["nb_new"]]
+    b = axs[1].bar(["Ikkilamchi", "Yangi qurilish"], nb, color=[GOLD, TEAL], width=0.5)
+    for bar, val in zip(b, nb):
         axs[1].text(bar.get_x() + bar.get_width() / 2, val + 0.08, f"{val}",
                     ha="center", fontweight="bold", fontsize=11)
     axs[1].set_ylabel("mediana yangi ko'rishlar / kun")
-    axs[1].set_ylim(0, 6.5)
-    axs[1].set_title("(b)  Ikkilamchi va yangi qurilish",
+    axs[1].set_ylim(0, max(nb) * 1.22)
+    axs[1].set_title("(b)  Bino turi bo'yicha talab tezligi",
                      fontsize=10.5, fontweight="bold", loc="left")
     dv = [R["dow"][d]["vpl"] for d in DOW_KEYS]
     cols = [TEAL if x < max(dv) else "#1d5f6b" for x in dv]
@@ -112,8 +112,8 @@ def build_s1_dimensions():
         axs[2].text(bar.get_x() + bar.get_width() / 2, val + 0.15, f"{val}",
                     ha="center", fontsize=9, fontweight="bold")
     axs[2].set_ylabel("o'rtacha yangi ko'rishlar / e'lon-kun")
-    axs[2].set_ylim(0, 14.5)
-    axs[2].set_title("(c)  Hafta kuni bo'yicha e'tibor",
+    axs[2].set_ylim(0, max(dv) * 1.2)
+    axs[2].set_title("(c)  Hafta kuni bo'yicha e'tibor oqimi",
                      fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
     plt.savefig(out("fig_s1_dimensions.pdf"), bbox_inches="tight")
@@ -170,8 +170,8 @@ def build_wedge_apartments():
     for i, vv in enumerate(vpd_q):
         a1.text(i, vv + 0.12, f"{vv}", ha="center", fontweight="bold", fontsize=10)
     a1.set_xticks(range(5)); a1.set_xticklabels(qlab, fontsize=8.3)
-    a1.set_ylabel("mediana yangi ko'rishlar / kun"); a1.set_ylim(0, 7)
-    a1.set_title("(a)  Xom e'tibor: ikki uchda yuqori",
+    a1.set_ylabel("mediana yangi ko'rishlar / kun"); a1.set_ylim(0, max(vpd_q) * 1.25)
+    a1.set_title("(a)  Dastlabki e'tibor narxning ikki chekkasida yuqori",
                  fontsize=11, fontweight="bold", loc="left")
     x = np.arange(5); w = 0.38
     a2.bar(x - w / 2, ca, w, color=TEAL, label="bosish olgan")
@@ -182,8 +182,8 @@ def build_wedge_apartments():
         a2.text(i + w / 2, fa[i] + 0.4, f"{fa[i]}", ha="center", fontsize=8.2,
                 color=GOLD, fontweight="bold")
     a2.set_xticks(x); a2.set_xticklabels(qlab, fontsize=8.3)
-    a2.set_ylabel("e'lonlar ulushi, %"); a2.set_ylim(0, 32)
-    a2.set_title("(b)  Niyat: narx oshgani sari kamayadi",
+    a2.set_ylabel("e'lonlar ulushi, %"); a2.set_ylim(0, max(max(ca), max(fa)) * 1.22)
+    a2.set_title("(b)  Xarid niyati narx oshishi bilan kamayadi",
                  fontsize=11, fontweight="bold", loc="left")
     a2.legend(frameon=False, fontsize=9)
     plt.tight_layout()
@@ -218,8 +218,9 @@ def build_intent_norm_districts():
     ax.text(len(order) - 0.4, avg_f + 0.4, f"o'rtacha saqlash {avg_f:.1f}%",
             fontsize=7.5, color="#a07d2e", ha="right", fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels(order, rotation=32, ha="right", fontsize=8.6)
-    ax.set_ylabel("tuman e'lonlari ulushi, %"); ax.set_ylim(0, 32)
-    ax.set_title("Tuman bo'yicha niyat (normalangan): bosish yoki saqlash olgan e'lonlar ulushi",
+    ax.set_ylabel("tuman e'lonlari ulushi, %")
+    ax.set_ylim(0, max(max(ca), max(fa)) * 1.25)
+    ax.set_title("Tumanlar bo'yicha xarid niyati (normalangan): bosish yoki saqlash olgan e'lonlar ulushi",
                  fontsize=11.5, fontweight="bold", loc="left")
     ax.legend(frameon=False, fontsize=9, loc="upper right")
     plt.tight_layout()
@@ -242,8 +243,8 @@ def build_s2_dimensions():
         a1.text(i + w / 2, fa[i] + 0.35, f"{fa[i]}", ha="center", fontsize=8.4,
                 color=GOLD, fontweight="bold")
     a1.set_xticks(x); a1.set_xticklabels([f"{k}-xona" for k in ks])
-    a1.set_ylabel("e'lonlar ulushi, %"); a1.set_ylim(0, 18.5)
-    a1.set_title("(a)  Xonalar soni bo'yicha niyat",
+    a1.set_ylabel("e'lonlar ulushi, %"); a1.set_ylim(0, max(max(ca), max(fa)) * 1.28)
+    a1.set_title("(a)  Xonalar soni bo'yicha xarid niyati",
                  fontsize=10.5, fontweight="bold", loc="left")
     a1.legend(frameon=False, fontsize=8.5)
     ck = [R["dow"][d]["cpk"] for d in DOW_KEYS]
@@ -256,8 +257,8 @@ def build_s2_dimensions():
         a2.text(i + w / 2, fk[i] + 0.4, f"{fk[i]:.1f}", ha="center", fontsize=7.6,
                 color=GOLD, fontweight="bold")
     a2.set_xticks(range(7)); a2.set_xticklabels(DAYS_UZ)
-    a2.set_ylabel("niyat / 1000 e'lon-kun"); a2.set_ylim(0, 22.5)
-    a2.set_title("(b)  Hafta kuni bo'yicha niyat",
+    a2.set_ylabel("niyat / 1000 e'lon-kun"); a2.set_ylim(0, max(max(ck), max(fk)) * 1.2)
+    a2.set_title("(b)  Hafta kuni bo'yicha xarid niyati",
                  fontsize=10.5, fontweight="bold", loc="left")
     a2.legend(frameon=False, fontsize=8.5)
     plt.tight_layout()
@@ -269,16 +270,17 @@ def build_s2_dimensions():
 def build_exit_apartments():
     """S3: Chiqish tezlik farqi + yangilash chegarasi dekompozitsiyasi."""
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.4))
-    b = a1.bar(["Bozorda qolgan", "Chiqib ketgan"],
-               [R["vpd_stay"], R["vpd_exit"]], color=[GOLD, TEAL], width=0.55)
-    for bar, vv in zip(b, [R["vpd_stay"], R["vpd_exit"]]):
+    ev = [R["vpd_stay"], R["vpd_exit"]]
+    b = a1.bar(["Bozorda qolgan", "Chiqib ketgan"], ev, color=[GOLD, TEAL], width=0.55)
+    for bar, vv in zip(b, ev):
         a1.text(bar.get_x() + bar.get_width() / 2, vv + 0.25, f"{vv}",
                 ha="center", fontweight="bold", fontsize=12)
-    a1.set_ylabel("mediana yangi ko'rishlar / kun"); a1.set_ylim(0, 14)
-    a1.set_title(f"(a)  Chiqishdan oldin {R['exit_gap']}\u00d7 ko'proq e'tibor",
+    top1 = max(ev) * 1.32
+    a1.set_ylabel("mediana yangi ko'rishlar / kun"); a1.set_ylim(0, top1)
+    a1.set_title(f"(a)  Chiqqan e'lonlar {R['exit_gap']}\u00d7 ko'proq e'tibor olgan",
                  fontsize=11, fontweight="bold", loc="left")
-    a1.text(0.5, 12.8,
-            f"1-hafta kogortasi; {R['exit_rate']:.0f}% davr oxiriga qadar chiqqan",
+    a1.text(0.5, top1 * 0.9,
+            f"1-haftalik guruh; {R['exit_rate']:.0f}% davr oxirigacha bozorni tark etgan",
             ha="center", fontsize=8, color=GREY)
     labs = ["Erta chiqish\n(<42 kun)", "Yangilash chegarasi\n(42\u201344 kun)",
             "Yangilashdan keyin\n(>44 kun)"]
@@ -292,8 +294,8 @@ def build_exit_apartments():
         a2.text(bar.get_x() + bar.get_width() / 2, max(s - 8, 3), f"VPD {vv}",
                 ha="center", fontsize=8.2, color="white" if s > 12 else INK,
                 fontweight="bold")
-    a2.set_ylabel("chiqishlar ulushi, %"); a2.set_ylim(0, 92)
-    a2.set_title("(b)  Ko'p chiqish 43-kun muddatida yangilanmaslik",
+    a2.set_ylabel("chiqishlar ulushi, %"); a2.set_ylim(0, max(shares) * 1.16)
+    a2.set_title("(b)  Chiqishlarning aksariyati 43-kunlik muddatda yangilanmaydi",
                  fontsize=11, fontweight="bold", loc="left")
     plt.tight_layout()
     plt.savefig(out("fig_exit_apartments.pdf"), bbox_inches="tight")
@@ -316,7 +318,8 @@ def build_exit_dims():
         a1.text(i, e + 1.2, f"{e:.0f}%", ha="center", fontsize=8.4, fontweight="bold")
     a1.set_xticks(range(len(order)))
     a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
-    a1.set_ylabel("kogortani tark etish ulushi, %"); a1.set_ylim(0, 84)
+    extop = max(max(ex), avg_ex) * 1.16
+    a1.set_ylabel("guruhni tark etish ulushi, %"); a1.set_ylim(0, extop)
     a1.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     a1.text(len(order) - 0.5, avg_ex + 1.5, f"tuman o'rtachasi {avg_ex:.0f}%",
             fontsize=7.8, color=AVG, ha="right", fontweight="bold")
@@ -328,9 +331,9 @@ def build_exit_dims():
     for bar, k in zip(b, ks2):
         a2.text(bar.get_x() + bar.get_width() / 2, er[k] + 1.2, f"{er[k]:.0f}%",
                 ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("chiqish ulushi, %"); a2.set_ylim(0, 84)
+    a2.set_ylabel("chiqish ulushi, %"); a2.set_ylim(0, extop)
     a2.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
-    a2.set_title("(b)  Xonalar soni bo'yicha chiqish",
+    a2.set_title("(b)  Xonalar soni bo'yicha chiqish darajasi",
                  fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
     plt.savefig(out("fig_exit_dims.pdf"), bbox_inches="tight")
@@ -354,7 +357,7 @@ def build_tom_dims():
         a1.text(a + 0.6, i, f"{a:.0f}", va="center", fontsize=8, fontweight="bold")
     a1.set_yticks(range(len(order))); a1.set_yticklabels(order, fontsize=8.4)
     a1.invert_yaxis()
-    a1.set_xlabel("faol zaxira mediana yoshi (kun)"); a1.set_xlim(0, 47)
+    a1.set_xlabel("faol zaxira mediana yoshi (kun)"); a1.set_xlim(0, max(ages) * 1.18)
     a1.axvline(avg_age, color=AVG, lw=1.3, ls="--")
     a1.text(avg_age + 0.5, len(order) - 0.5, f"o'rtacha {avg_age:.0f}",
             fontsize=7.8, color=AVG, va="center", fontweight="bold")
@@ -366,7 +369,7 @@ def build_tom_dims():
     for bar, k in zip(b, ks3):
         a2.text(bar.get_x() + bar.get_width() / 2, ar[k] + 1, f"{ar[k]}",
                 ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("mediana faol kunlar"); a2.set_ylim(0, 58)
+    a2.set_ylabel("mediana faol kunlar"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.15)
     a2.axhline(avg_age, color=AVG, lw=1.3, ls="--")
     a2.set_title("(b)  Xonalar soni bo'yicha zaxira yoshi",
                  fontsize=10.5, fontweight="bold", loc="left")
@@ -388,8 +391,8 @@ def build_metrics_panel_apartments():
     avg_row = dict(vpd=round(D.vpd.mean(), 1), click=round(D.click.mean(), 1),
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Talab tezligi", "yangi ko'rishlar / kun", False, "{:.1f}"),
-            ("click", "Bosish & saqlash", "bosish olgan e'lon %", False, "{:.0f}%"),
-            ("exit", "Chiqish darajasi", "kogorta chiqishi %", False, "{:.0f}%"),
+            ("click", "Bosish va saqlash", "bosish olgan e'lon, %", False, "{:.0f}%"),
+            ("exit", "Chiqish darajasi", "guruh chiqishi, %", False, "{:.0f}%"),
             ("age", "Bozorda turish", "mediana faol kun", True, "{:.0f}")]
     cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
              "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),
@@ -432,7 +435,8 @@ def build_metrics_panel_apartments():
                 fontsize=9, color=INK)
     ax.text(-0.06, 0, "TUMAN O'RTACHASI", ha="right", va="center",
             fontsize=8.5, color=INK, fontweight="bold")
-    ax.text(2, -1.15, SRC + " Bektemir n=11.", ha="center", fontsize=7, color=GREY)
+    ax.text(2, -1.15, SRC + f" Bektemir n={d['Bektemir']['nlist']}.",
+            ha="center", fontsize=7, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_metrics_panel_apartments.pdf"), bbox_inches="tight")
     plt.close()
@@ -562,7 +566,7 @@ def build_supply_demand_bands():
         ax2.text(i + 0.08, dv + 0.25, f"{dv}", fontsize=9, color=RUST, fontweight="bold")
     ax2.set_ylabel("Mediana yangi ko'rishlar / kun (talab)", color=RUST, fontsize=10)
     ax2.tick_params(axis="y", colors=RUST); ax2.set_ylim(0, 11.5)
-    ax1.set_title("Taklif \\$50\u2013150k oralig'ida to'plangan; talab \\$30k dan pastda cho'qqida",
+    ax1.set_title("Taklif \\$50\u2013150k narx oralig'ida jamlangan; talab \\$30k dan past segmentda eng yuqori",
                   fontsize=12, fontweight="bold", loc="left", pad=12)
     fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
     plt.tight_layout()
