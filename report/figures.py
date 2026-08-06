@@ -27,18 +27,16 @@ GREY, INK = "#9AA0A6", "#2b2b2b"
 AVG = "#444444"
 
 os.makedirs(config.FIG_DIR, exist_ok=True)
-R = L = P = SRC = None
+R = L = P = None
 DAYS_UZ = ["Dush", "Sesh", "Chor", "Pay", "Juma", "Shan", "Yak"]
 DOW_KEYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
 def _load():
-    global R, L, P, SRC
+    global R, L, P
     R = json.load(open(os.path.join(config.BUILD_DIR, "metrics.json")))
     L = pd.read_pickle(os.path.join(config.BUILD_DIR, "L.pkl"))
     P = pd.read_pickle(os.path.join(config.BUILD_DIR, "P.pkl"))
-    SRC = ("Manba: mualliflar hisob-kitobi, Uybor.uz kunlik panel, kvartiralar, "
-           f"{R['window']['date_min']} \u2013 {R['window']['date_max']}.")
 
 
 def out(name):
@@ -198,7 +196,6 @@ def build_intent_norm_districts():
     order = sorted(IN, key=lambda d: -IN[d]["clicka"])
     ca = [IN[d]["clicka"] for d in order]
     fa = [IN[d]["fava"] for d in order]
-    nn = [IN[d]["n"] for d in order]
     avg_c = float(np.mean([IN[d]["clicka"] for d in IN]))
     avg_f = float(np.mean([IN[d]["fava"] for d in IN]))
     fig, ax = plt.subplots(figsize=(10.5, 4.9))
@@ -210,13 +207,19 @@ def build_intent_norm_districts():
                 color=TEAL, fontweight="bold")
         ax.text(i + w / 2, fa[i] + 0.5, f"{fa[i]:.0f}", ha="center", fontsize=8.2,
                 color=GOLD, fontweight="bold")
+    # Average lines span the full axis; label each one in the clear right-hand
+    # margin at its own height, so the text never sits on top of the bars.
     ax.axhline(avg_c, color=TEAL, lw=1.2, ls="--", alpha=0.7)
-    ax.text(len(order) - 0.4, avg_c + 0.4, f"o'rtacha bosish {avg_c:.1f}%",
-            fontsize=7.5, color=TEAL, ha="right", fontweight="bold")
     ax.axhline(avg_f, color="#a07d2e", lw=1.2, ls="--", alpha=0.7)
-    ax.text(len(order) - 0.4, avg_f + 0.4, f"o'rtacha saqlash {avg_f:.1f}%",
-            fontsize=7.5, color="#a07d2e", ha="right", fontweight="bold")
+    lbl_bbox = dict(facecolor="white", edgecolor="none", pad=1.2)
+    ax.text(len(order) - 0.35, avg_c, f"o'rtacha bosish {avg_c:.1f}%",
+            fontsize=7.5, color=TEAL, ha="left", va="center", fontweight="bold",
+            bbox=lbl_bbox)
+    ax.text(len(order) - 0.35, avg_f, f"o'rtacha saqlash {avg_f:.1f}%",
+            fontsize=7.5, color="#a07d2e", ha="left", va="center", fontweight="bold",
+            bbox=lbl_bbox)
     ax.set_xticks(x); ax.set_xticklabels(order, rotation=32, ha="right", fontsize=8.6)
+    ax.set_xlim(-0.7, len(order) - 0.5 + 2.2)
     ax.set_ylabel("tuman e'lonlari ulushi, %")
     ax.set_ylim(0, max(max(ca), max(fa)) * 1.25)
     ax.set_title("Tumanlar bo'yicha xarid niyati (normalangan): bosish yoki saqlash olgan e'lonlar ulushi",
@@ -278,21 +281,14 @@ def build_exit_apartments():
     a1.set_ylabel("mediana yangi ko'rishlar / kun"); a1.set_ylim(0, top1)
     a1.set_title(f"(a)  Chiqqan e'lonlar {R['exit_gap']}\u00d7 ko'proq e'tibor olgan",
                  fontsize=11, fontweight="bold", loc="left")
-    a1.text(0.5, top1 * 0.9,
-            f"1-haftalik guruh; {R['exit_rate']:.0f}% davr oxirigacha bozorni tark etgan",
-            ha="center", fontsize=8, color=GREY)
     labs = ["Erta chiqish\n(<42 kun)", "Yangilash chegarasi\n(42\u201344 kun)",
             "Yangilashdan keyin\n(>44 kun)"]
     shares = [R["exit_early_pct"], R["exit_wall_pct"], R["exit_late_pct"]]
-    vpds = [R["vpd_early_exit"], R["vpd_wall_exit"], R["vpd_late_exit"]]
     cols = [GOLD, TEAL, RUST]
     b = a2.bar(labs, shares, color=cols, width=0.6)
-    for bar, s, vv in zip(b, shares, vpds):
-        a2.text(bar.get_x() + bar.get_width() / 2, s + 1.6, f"{s}%",
-                ha="center", fontweight="bold", fontsize=10.5)
-        a2.text(bar.get_x() + bar.get_width() / 2, max(s - 8, 3), f"VPD {vv}",
-                ha="center", fontsize=8.2, color="white" if s > 12 else INK,
-                fontweight="bold")
+    for bar, s in zip(b, shares):
+        cx = bar.get_x() + bar.get_width() / 2
+        a2.text(cx, s + 1.6, f"{s}%", ha="center", fontweight="bold", fontsize=10.5)
     a2.set_ylabel("chiqishlar ulushi, %"); a2.set_ylim(0, max(shares) * 1.16)
     a2.set_title("(b)  Chiqishlarning aksariyati 43-kunlik muddatda yangilanmaydi",
                  fontsize=11, fontweight="bold", loc="left")
@@ -434,7 +430,7 @@ def build_metrics_panel_apartments():
                 fontsize=9, color=INK)
     ax.text(-0.06, 0, "TUMAN O'RTACHASI", ha="right", va="center",
             fontsize=8.5, color=INK, fontweight="bold")
-    ax.text(2, -1.15, SRC + f" Bektemir n={d['Bektemir']['nlist']}.",
+    ax.text(2, -1.15, f"Bektemir n={d['Bektemir']['nlist']}.",
             ha="center", fontsize=7, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_metrics_panel_apartments.pdf"), bbox_inches="tight")
@@ -539,7 +535,7 @@ def build_demand_map():
     fig.patch.set_facecolor("white")
     fig.text(0.5, 0.03,
              "Har tuman o'z e'lonlarining mediana koordinatalarida; aylana o'lchami = qamrov (reach). "
-             "So'nik nuqtalar: alohida kvartiralar. " + SRC,
+             "So'nik nuqtalar: alohida kvartiralar.",
              ha="center", fontsize=7.2, color=GREY)
     plt.savefig(out("fig_demand_map.pdf"), bbox_inches="tight", facecolor="white")
     plt.close()
@@ -554,9 +550,10 @@ def build_supply_demand_bands():
     dem = [R["bands"][b]["medvpd"] for b in bl]
     fig, ax1 = plt.subplots(figsize=(9, 4.8))
     ax1.bar(range(7), sup, color="#e7e2da", edgecolor="#c9c2b6", width=0.72, zorder=2)
+    smax = max(sup)
     for i, s in enumerate(sup):
-        ax1.text(i, s + 14, f"{s}", ha="center", fontsize=8.5, color=GREY)
-    ax1.set_ylabel("E'lonlar soni (taklif)", fontsize=10); ax1.set_ylim(0, 860)
+        ax1.text(i, s + smax * 0.018, f"{s}", ha="center", fontsize=8.5, color=GREY)
+    ax1.set_ylabel("E'lonlar soni (taklif)", fontsize=10); ax1.set_ylim(0, smax * 1.12)
     ax1.set_xticks(range(7)); ax1.set_xticklabels(bl, fontsize=9)
     ax1.set_xlabel("Narx oralig'i (USD)")
     ax2 = ax1.twinx(); ax2.spines["top"].set_visible(False)
@@ -567,7 +564,6 @@ def build_supply_demand_bands():
     ax2.tick_params(axis="y", colors=RUST); ax2.set_ylim(0, 11.5)
     ax1.set_title("Taklif \\$50\u2013150k narx oralig'ida jamlangan; talab \\$30k dan past segmentda eng yuqori",
                   fontsize=12, fontweight="bold", loc="left", pad=12)
-    fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_supply_demand_bands.pdf"), bbox_inches="tight")
     plt.close()
