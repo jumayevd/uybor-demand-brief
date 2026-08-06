@@ -58,13 +58,13 @@ def build_concentration_apartments():
     a1.set_xscale("log")
     a1.axvline(med, color=GOLD, lw=2.2)
     a1.axvline(mean, color=TEAL, lw=2.2)
-    a1.text(med * 0.9, a1.get_ylim()[1] * 0.92, f"mediana {med:.1f}\ntipik e'lon",
+    a1.text(med * 0.9, a1.get_ylim()[1] * 0.92, f"mediana {med:.1f}",
             color=GOLD, fontsize=8.5, fontweight="bold", ha="right")
-    a1.text(mean * 1.1, a1.get_ylim()[1] * 0.74, f"o'rtacha {mean:.1f}\ndum ta'sirida",
+    a1.text(mean * 1.1, a1.get_ylim()[1] * 0.74, f"o'rtacha {mean:.1f}",
             color=TEAL, fontsize=8.5, fontweight="bold")
     a1.set_xlabel("kunlik yangi ko'rishlar (log shkala)")
     a1.set_ylabel("e'lonlar soni")
-    a1.set_title("(a)  Kunlik e'tibor taqsimoti: og'ir dumli",
+    a1.set_title("(a)  Kunlik e'tibor taqsimoti",
                  fontsize=10.5, fontweight="bold", loc="left")
     vals = [R["top10"], R["top25"], R["bot50"]]
     b = a2.bar(["Yuqori 10%", "Yuqori 25%", "Quyi 50%"], vals,
@@ -210,7 +210,6 @@ def build_intent_norm_districts():
                 color=TEAL, fontweight="bold")
         ax.text(i + w / 2, fa[i] + 0.5, f"{fa[i]:.0f}", ha="center", fontsize=8.2,
                 color=GOLD, fontweight="bold")
-        ax.text(i, -3.2, f"n={nn[i]}", ha="center", fontsize=6.8, color=GREY)
     ax.axhline(avg_c, color=TEAL, lw=1.2, ls="--", alpha=0.7)
     ax.text(len(order) - 0.4, avg_c + 0.4, f"o'rtacha bosish {avg_c:.1f}%",
             fontsize=7.5, color=TEAL, ha="right", fontweight="bold")
@@ -410,9 +409,9 @@ def build_metrics_panel_apartments():
     ax.set_xlim(0, 4); ax.set_ylim(-1.4, nrows + 1.4)
     ax.text(2, nrows + 1.15, "To'rt talab signali tumanlar bo'yicha \u2014 faqat kvartiralar",
             ha="center", fontsize=13, fontweight="bold", color=INK)
-    ax.text(2, nrows + 0.72,
-            "Talab tezligi bo'yicha saralangan. Har ustun alohida; to'q = kuchliroq talab (Bozorda turish teskari).",
-            ha="center", fontsize=7.6, color=GREY, style="italic")
+    # ax.text(2, nrows + 0.72,
+    #         "Talab tezligi bo'yicha saralangan. Har ustun alohida; to'q = kuchliroq talab (Bozorda turish teskari).",
+    #         ha="center", fontsize=7.6, color=GREY, style="italic")
     for j, (key, title, sub, inv, fmt) in enumerate(cols):
         n = shade(D[key], inv)
         ax.text(j + 0.5, nrows + 0.18, title, ha="center", fontweight="bold",
