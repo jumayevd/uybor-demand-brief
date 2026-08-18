@@ -481,8 +481,8 @@ def build_demand_map():
         y = y0 - i * dy; rv = d[k]["reach"]
         axr.add_patch(plt.Rectangle((0.08, y - 0.011), 0.022, 0.022, fc=BUBBLE, ec="none"))
         axr.text(0.125, y, k, fontsize=9.3, color=INK, va="center")
-        bw = 0.30 * rv / rmax
-        axr.add_patch(plt.Rectangle((0.56, y - 0.006), 0.34, 0.012, fc="#e7ded0", ec="none"))
+        bw = 0.24 * rv / rmax
+        axr.add_patch(plt.Rectangle((0.56, y - 0.006), 0.24, 0.012, fc="#e7ded0", ec="none"))
         axr.add_patch(plt.Rectangle((0.56, y - 0.006), max(bw, 0.004), 0.012, fc=BUBBLE, ec="none"))
         axr.text(0.985, y, f"{rv:,}", fontsize=8.3, color=INK, va="center", ha="right",
                  fontweight="bold")
