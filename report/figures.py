@@ -157,8 +157,8 @@ def build_wedge_apartments():
     a1.set_xticks(range(5)); a1.set_xticklabels(qlab, fontsize=8.3)
     a1.set_ylabel("mediana yangi ko'rishlar / kun"); a1.set_ylim(0, max(vpd_q) * 1.25)
     x = np.arange(5); w = 0.38
-    a2.bar(x - w / 2, ca, w, color=TEAL, label="bosish olgan")
-    a2.bar(x + w / 2, fa, w, color=GOLD, label="saqlangan")
+    a2.bar(x - w / 2, ca, w, color=TEAL, label="Kliklar")
+    a2.bar(x + w / 2, fa, w, color=GOLD, label="Saqlanganlar")
     for i in range(5):
         a2.text(i - w / 2, ca[i] + 0.4, f"{ca[i]}", ha="center", fontsize=8.2,
                 color=TEAL, fontweight="bold")
@@ -183,7 +183,7 @@ def build_intent_norm_districts():
     avg_f = float(np.mean([IN[d]["fava"] for d in IN]))
     fig, ax = plt.subplots(figsize=(10.5, 4.9))
     x = np.arange(len(order)); w = 0.4
-    ax.bar(x - w / 2, ca, w, color=TEAL, label="bosish olgan e'lonlar, %")
+    ax.bar(x - w / 2, ca, w, color=TEAL, label="klik olgan e'lonlar, %")
     ax.bar(x + w / 2, fa, w, color=GOLD, label="saqlangan e'lonlar, %")
     for i in range(len(order)):
         ax.text(i - w / 2, ca[i] + 0.5, f"{ca[i]:.0f}", ha="center", fontsize=8.2,
@@ -195,7 +195,7 @@ def build_intent_norm_districts():
     ax.axhline(avg_c, color=TEAL, lw=1.2, ls="--", alpha=0.7)
     ax.axhline(avg_f, color="#a07d2e", lw=1.2, ls="--", alpha=0.7)
     lbl_bbox = dict(facecolor="white", edgecolor="none", pad=1.2)
-    ax.text(len(order) - 0.35, avg_c, f"o'rtacha bosish {avg_c:.1f}%",
+    ax.text(len(order) - 0.35, avg_c, f"o'rtacha klik {avg_c:.1f}%",
             fontsize=7.5, color=TEAL, ha="left", va="center", fontweight="bold",
             bbox=lbl_bbox)
     ax.text(len(order) - 0.35, avg_f, f"o'rtacha saqlash {avg_f:.1f}%",
@@ -218,8 +218,8 @@ def build_s2_dimensions():
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.2))
     ca = [rd[k]["clicka"] for k in ks]; fa = [rd[k]["fava"] for k in ks]
     x = np.arange(len(ks)); w = 0.38
-    a1.bar(x - w / 2, ca, w, color=TEAL, label="bosish olgan, %")
-    a1.bar(x + w / 2, fa, w, color=GOLD, label="saqlangan, %")
+    a1.bar(x - w / 2, ca, w, color=TEAL, label="Kliklar, %")
+    a1.bar(x + w / 2, fa, w, color=GOLD, label="Saqlanganlar, %")
     for i in range(len(ks)):
         a1.text(i - w / 2, ca[i] + 0.35, f"{ca[i]}", ha="center", fontsize=8.4,
                 color=TEAL, fontweight="bold")
@@ -230,7 +230,7 @@ def build_s2_dimensions():
     a1.legend(frameon=False, fontsize=8.5)
     ck = [R["dow"][d]["cpk"] for d in DOW_KEYS]
     fk = [R["dow"][d]["fpk"] for d in DOW_KEYS]
-    a2.bar(np.arange(7) - w / 2, ck, w, color=TEAL, label="bosish / 1000 e'lon-kun")
+    a2.bar(np.arange(7) - w / 2, ck, w, color=TEAL, label="klik / 1000 e'lon-kun")
     a2.bar(np.arange(7) + w / 2, fk, w, color=GOLD, label="saqlash / 1000 e'lon-kun")
     for i in range(7):
         a2.text(i - w / 2, ck[i] + 0.4, f"{ck[i]:.0f}", ha="center", fontsize=8,
@@ -321,7 +321,7 @@ def build_tom_dims():
         a1.text(a + 0.6, i, f"{a:.0f}", va="center", fontsize=8, fontweight="bold")
     a1.set_yticks(range(len(order))); a1.set_yticklabels(order, fontsize=8.4)
     a1.invert_yaxis()
-    a1.set_xlabel("faol zaxira mediana yoshi (kun)"); a1.set_xlim(0, max(ages) * 1.18)
+    a1.set_xlabel("Bozorda qolish muddati (kun)"); a1.set_xlim(0, max(ages) * 1.18)
     a1.axvline(avg_age, color=AVG, lw=1.3, ls="--")
     a1.text(avg_age + 0.5, len(order) - 0.5, f"o'rtacha {avg_age:.0f}",
             fontsize=7.8, color=AVG, va="center", fontweight="bold")
@@ -331,7 +331,7 @@ def build_tom_dims():
     for bar, k in zip(b, ks3):
         a2.text(bar.get_x() + bar.get_width() / 2, ar[k] + 1, f"{ar[k]}",
                 ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("mediana faol kunlar"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.15)
+    a2.set_ylabel("mediana bozorda qolish (kun)"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.15)
     a2.axhline(avg_age, color=AVG, lw=1.3, ls="--")
     plt.tight_layout()
     plt.savefig(out("fig_tom_dims.pdf"), bbox_inches="tight")
@@ -351,9 +351,9 @@ def build_metrics_panel_apartments():
     avg_row = dict(vpd=round(D.vpd.mean(), 1), click=round(D.click.mean(), 1),
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Talab tezligi", "yangi ko'rishlar / kun", False, "{:.1f}"),
-            ("click", "Bosish va saqlash", "bosish olgan e'lon, %", False, "{:.0f}%"),
-            ("exit", "Chiqish darajasi", "guruh chiqishi, %", False, "{:.0f}%"),
-            ("age", "Bozorda turish", "mediana faol kun", True, "{:.0f}")]
+            ("click", "Klik olgan va\nsaqlanganlar ulushi", "klik olgan e'lon, %", False, "{:.0f}%"),
+            ("exit", "Bozordan chiqish\ndarajasi", "guruh chiqishi, %", False, "{:.0f}%"),
+            ("age", "Bozorda qolish\nmuddati", "mediana faol kun", True, "{:.0f}")]
     cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
              "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),
              "exit": LinearSegmentedColormap.from_list("r2", ["#f4e6e2", RUST]),
@@ -370,9 +370,9 @@ def build_metrics_panel_apartments():
     ax.set_xlim(0, 4); ax.set_ylim(-1.4, nrows + 1.4)
     for j, (key, title, sub, inv, fmt) in enumerate(cols):
         n = shade(D[key], inv)
-        ax.text(j + 0.5, nrows + 0.18, title, ha="center", fontweight="bold",
-                fontsize=9.5, color=colcolor[key])
-        ax.text(j + 0.5, nrows - 0.14, sub, ha="center", fontsize=7.1, color=GREY)
+        ax.text(j + 0.5, nrows + 0.16, title, ha="center", va="bottom", fontweight="bold",
+                fontsize=8.7, color=colcolor[key])
+        ax.text(j + 0.5, nrows - 0.24, sub, ha="center", fontsize=7.1, color=GREY)
         for rr in range(len(D)):
             val = D[key].iloc[rr]; c = cmaps[key](0.15 + 0.85 * n[rr])
             tc = "white" if n[rr] > 0.55 else INK
@@ -411,7 +411,7 @@ def build_demand_map():
     orig = pos.copy()
     reach = np.array([d[k]["reach"] for k in names], float)
     maxr = reach.max()
-    rad = {names[i]: 0.004 + 0.017 * (reach[i] / maxr) ** 0.5 for i in range(len(names))}
+    rad = {names[i]: 0.004 + 0.0125 * (reach[i] / maxr) ** 0.5 for i in range(len(names))}
     radarr = np.array([rad[k] for k in names])
     for _ in range(400):
         moved = 0
@@ -439,9 +439,9 @@ def build_demand_map():
         s.set_color("#eae4d8"); s.set_linewidth(1)
     axm.set_xticks([]); axm.set_yticks([])
     xs = [posd[k][0] for k in cc]; ys = [posd[k][1] for k in cc]
-    padx = (max(xs) - min(xs)) * 0.14; pady = (max(ys) - min(ys)) * 0.16
+    padx = (max(xs) - min(xs)) * 0.16; pady = (max(ys) - min(ys)) * 0.18
     axm.set_xlim(min(xs) - padx, max(xs) + padx)
-    axm.set_ylim(min(ys) - pady, max(ys) + pady * 1.3)
+    axm.set_ylim(min(ys) - pady, max(ys) + pady * 1.5)
     axm.set_aspect(1 / asp)
 
     pcloud = P.drop_duplicates("listing_id")[["longitude", "latitude"]].dropna()
