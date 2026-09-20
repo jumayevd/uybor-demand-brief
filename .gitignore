@@ -11,6 +11,7 @@ __pycache__/
 report/data/uybor_listings_v2.csv
 report/build/
 report/figures/
+report/figures_en/
 report/figures_png/
 report/png/
 *.zip

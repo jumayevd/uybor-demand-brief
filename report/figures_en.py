@@ -1,0 +1,556 @@
+"""
+figures_en.py — ENGLISH figures for the working paper.
+=====================================================
+Same data pipeline and layout as figures.py (reach-based demand map, dynamic
+axis limits so labels never overflow, 11 paper figures), but all text is in
+English and the subplot titles used by the paper are restored. District names
+stay in their Uzbek-Latin form (as the paper uses them).
+
+Run:  python figures_en.py   (reads build/metrics.json + build/{L,P}.pkl)
+Writes: figures_en/fig_*.pdf
+"""
+import os
+import json
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.patches import Ellipse
+import matplotlib.gridspec as gridspec
+import config
+
+mpl.rcParams["font.family"] = "DejaVu Sans"
+mpl.rcParams["pdf.fonttype"] = 42
+mpl.rcParams["axes.spines.top"] = False
+mpl.rcParams["axes.spines.right"] = False
+
+GOLD, TEAL, RUST, PURP = "#C8A15A", "#2E7D8A", "#B24C3C", "#6B5B95"
+GREY, INK = "#9AA0A6", "#2b2b2b"
+AVG = "#444444"
+
+FIG_DIR = "figures_en"
+os.makedirs(FIG_DIR, exist_ok=True)
+R = L = P = SRC = None
+DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+DOW_KEYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def _load():
+    global R, L, P, SRC
+    R = json.load(open(os.path.join(config.BUILD_DIR, "metrics.json")))
+    L = pd.read_pickle(os.path.join(config.BUILD_DIR, "L.pkl"))
+    P = pd.read_pickle(os.path.join(config.BUILD_DIR, "P.pkl"))
+    w = R["window"]
+    SRC = ("Source: authors\u2019 calculations, Uybor.uz daily panel, apartments, "
+           f"{w['date_min']} \u2013 {w['date_max']}.")
+
+
+def out(name):
+    return os.path.join(FIG_DIR, name)
+
+
+def build_concentration_apartments():
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.3))
+    v = L.vpd.values
+    med, mean = np.median(v), np.mean(v)
+    bins = np.logspace(np.log10(max(v.min(), 0.1)), np.log10(v.max() + 1), 45)
+    a1.hist(v, bins=bins, color=TEAL, alpha=0.55, edgecolor="white", lw=0.4)
+    a1.set_xscale("log")
+    a1.axvline(med, color=GOLD, lw=2.2)
+    a1.axvline(mean, color=TEAL, lw=2.2)
+    a1.text(med * 0.9, a1.get_ylim()[1] * 0.92, f"median {med:.1f}\nthe typical listing",
+            color=GOLD, fontsize=8.5, fontweight="bold", ha="right")
+    a1.text(mean * 1.1, a1.get_ylim()[1] * 0.74, f"mean {mean:.1f}\ndragged up by the tail",
+            color=TEAL, fontsize=8.5, fontweight="bold")
+    a1.set_xlabel("new views per day per listing (log scale)")
+    a1.set_ylabel("number of listings")
+    a1.set_title("(a)  Most listings trickle; a few flood",
+                 fontsize=11, fontweight="bold", loc="left")
+    vals = [R["top10"], R["top25"], R["bot50"]]
+    b = a2.bar(["Top 10%", "Top 25%", "Bottom 50%"], vals,
+               color=[TEAL, "#7FB0B8", GOLD], width=0.6)
+    for bar, val in zip(b, vals):
+        a2.text(bar.get_x() + bar.get_width() / 2, val + 1.5, f"{val}%",
+                ha="center", fontweight="bold", fontsize=11)
+    a2.set_ylabel("share of all new views captured")
+    a2.set_ylim(0, max(vals) * 1.18)
+    a2.set_xlabel("listings ranked by attention")
+    a2.set_title("(b)  Where the attention goes",
+                 fontsize=11, fontweight="bold", loc="left")
+    plt.tight_layout()
+    plt.savefig(out("fig_concentration_apartments.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_concentration_apartments.pdf")
+
+
+def build_s1_dimensions():
+    fig, axs = plt.subplots(1, 3, figsize=(13, 4))
+    rd = R["rooms_dims"]; ks = sorted(rd)
+    vals = [rd[k]["vpd"] for k in ks]
+    b = axs[0].bar([f"{k}-rm" for k in ks], vals, color=TEAL, width=0.62)
+    for bar, val in zip(b, vals):
+        axs[0].text(bar.get_x() + bar.get_width() / 2, val + 0.08, f"{val}",
+                    ha="center", fontweight="bold", fontsize=10)
+    axs[0].set_ylabel("median new views / day")
+    axs[0].set_ylim(0, max(vals) * 1.22)
+    axs[0].set_title("(a)  Velocity by room count",
+                     fontsize=10.5, fontweight="bold", loc="left")
+    nb = [R["nb_sec"], R["nb_new"]]
+    b = axs[1].bar(["Secondary", "New build"], nb, color=[GOLD, TEAL], width=0.5)
+    for bar, val in zip(b, nb):
+        axs[1].text(bar.get_x() + bar.get_width() / 2, val + 0.08, f"{val}",
+                    ha="center", fontweight="bold", fontsize=11)
+    axs[1].set_ylabel("median new views / day")
+    axs[1].set_ylim(0, max(nb) * 1.22)
+    axs[1].set_title("(b)  Secondary vs new build",
+                     fontsize=10.5, fontweight="bold", loc="left")
+    dv = [R["dow"][d]["vpl"] for d in DOW_KEYS]
+    cols = [TEAL if x < max(dv) else "#1d5f6b" for x in dv]
+    b = axs[2].bar(DAYS_EN, dv, color=cols, width=0.62)
+    for bar, val in zip(b, dv):
+        axs[2].text(bar.get_x() + bar.get_width() / 2, val + 0.15, f"{val}",
+                    ha="center", fontsize=9, fontweight="bold")
+    axs[2].set_ylabel("mean new views per listing-day")
+    axs[2].set_ylim(0, max(dv) * 1.2)
+    axs[2].set_title("(c)  Attention by day of week",
+                     fontsize=10.5, fontweight="bold", loc="left")
+    plt.tight_layout()
+    plt.savefig(out("fig_s1_dimensions.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_s1_dimensions.pdf")
+
+
+def build_wedge_apartments():
+    Q = R["quintiles"]; ql = ["Q1", "Q2", "Q3", "Q4", "Q5"]
+    qlab = ["Q1\n\u2264$" + str(Q['Q1']['pmax'] // 1000) + "k",
+            "Q2\n$" + str(Q['Q2']['pmin'] // 1000) + "-" + str(Q['Q2']['pmax'] // 1000) + "k",
+            "Q3\n$" + str(Q['Q3']['pmin'] // 1000) + "-" + str(Q['Q3']['pmax'] // 1000) + "k",
+            "Q4\n$" + str(Q['Q4']['pmin'] // 1000) + "-" + str(Q['Q4']['pmax'] // 1000) + "k",
+            "Q5\n\u2265$" + str(Q['Q5']['pmin'] // 1000) + "k"]
+    vpd_q = [Q[q]["vpd"] for q in ql]
+    ca = [Q[q]["clicka"] for q in ql]; fa = [Q[q]["fava"] for q in ql]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.4))
+    cols = [TEAL] * 5; cols[3] = RUST
+    a1.bar(range(5), vpd_q, color=cols, width=0.68)
+    for i, vv in enumerate(vpd_q):
+        a1.text(i, vv + 0.12, f"{vv}", ha="center", fontweight="bold", fontsize=10)
+    a1.set_xticks(range(5)); a1.set_xticklabels(qlab, fontsize=8.3)
+    a1.set_ylabel("median new views / day"); a1.set_ylim(0, max(vpd_q) * 1.25)
+    a1.set_title("(a)  Raw attention: high at both ends",
+                 fontsize=11, fontweight="bold", loc="left")
+    x = np.arange(5); w = 0.38
+    a2.bar(x - w / 2, ca, w, color=TEAL, label="earned a click")
+    a2.bar(x + w / 2, fa, w, color=GOLD, label="earned a favorite")
+    for i in range(5):
+        a2.text(i - w / 2, ca[i] + 0.4, f"{ca[i]}", ha="center", fontsize=8.2,
+                color=TEAL, fontweight="bold")
+        a2.text(i + w / 2, fa[i] + 0.4, f"{fa[i]}", ha="center", fontsize=8.2,
+                color=GOLD, fontweight="bold")
+    a2.set_xticks(x); a2.set_xticklabels(qlab, fontsize=8.3)
+    a2.set_ylabel("% of listings"); a2.set_ylim(0, max(max(ca), max(fa)) * 1.22)
+    a2.set_title("(b)  Intent: falls monotonically with price",
+                 fontsize=11, fontweight="bold", loc="left")
+    a2.legend(frameon=False, fontsize=9)
+    plt.tight_layout()
+    plt.savefig(out("fig_wedge_apartments.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_wedge_apartments.pdf")
+
+
+def build_intent_norm_districts():
+    IN = R["intent_norm"]
+    order = sorted(IN, key=lambda d: -IN[d]["clicka"])
+    ca = [IN[d]["clicka"] for d in order]
+    fa = [IN[d]["fava"] for d in order]
+    avg_c = float(np.mean([IN[d]["clicka"] for d in IN]))
+    avg_f = float(np.mean([IN[d]["fava"] for d in IN]))
+    fig, ax = plt.subplots(figsize=(10.5, 4.9))
+    x = np.arange(len(order)); w = 0.4
+    ax.bar(x - w / 2, ca, w, color=TEAL, label="% of listings earning a click")
+    ax.bar(x + w / 2, fa, w, color=GOLD, label="% of listings earning a favorite")
+    for i in range(len(order)):
+        ax.text(i - w / 2, ca[i] + 0.5, f"{ca[i]:.0f}", ha="center", fontsize=8.2,
+                color=TEAL, fontweight="bold")
+        ax.text(i + w / 2, fa[i] + 0.5, f"{fa[i]:.0f}", ha="center", fontsize=8.2,
+                color=GOLD, fontweight="bold")
+    ax.axhline(avg_c, color=TEAL, lw=1.2, ls="--", alpha=0.7)
+    ax.axhline(avg_f, color="#a07d2e", lw=1.2, ls="--", alpha=0.7)
+    lbl_bbox = dict(facecolor="white", edgecolor="none", pad=1.2)
+    ax.text(len(order) - 0.35, avg_c, f"mean click {avg_c:.1f}%",
+            fontsize=7.5, color=TEAL, ha="left", va="center", fontweight="bold",
+            bbox=lbl_bbox)
+    ax.text(len(order) - 0.35, avg_f, f"mean save {avg_f:.1f}%",
+            fontsize=7.5, color="#a07d2e", ha="left", va="center", fontweight="bold",
+            bbox=lbl_bbox)
+    ax.set_xticks(x); ax.set_xticklabels(order, rotation=32, ha="right", fontsize=8.6)
+    ax.set_xlim(-0.7, len(order) - 0.5 + 2.2)
+    ax.set_ylabel("% of district listings")
+    ax.set_ylim(0, max(max(ca), max(fa)) * 1.25)
+    ax.set_title("Intent incidence by district (normalized): share of listings earning any click or favorite",
+                 fontsize=11.5, fontweight="bold", loc="left")
+    ax.legend(frameon=False, fontsize=9, loc="upper right")
+    plt.tight_layout()
+    plt.savefig(out("fig_intent_norm_districts.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_intent_norm_districts.pdf")
+
+
+def build_s2_dimensions():
+    rd = R["rooms_dims"]; ks = sorted(rd)
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.2))
+    ca = [rd[k]["clicka"] for k in ks]; fa = [rd[k]["fava"] for k in ks]
+    x = np.arange(len(ks)); w = 0.38
+    a1.bar(x - w / 2, ca, w, color=TEAL, label="earned a click")
+    a1.bar(x + w / 2, fa, w, color=GOLD, label="earned a favorite")
+    for i in range(len(ks)):
+        a1.text(i - w / 2, ca[i] + 0.35, f"{ca[i]}", ha="center", fontsize=8.4,
+                color=TEAL, fontweight="bold")
+        a1.text(i + w / 2, fa[i] + 0.35, f"{fa[i]}", ha="center", fontsize=8.4,
+                color=GOLD, fontweight="bold")
+    a1.set_xticks(x); a1.set_xticklabels([f"{k}-rm" for k in ks])
+    a1.set_ylabel("% of listings"); a1.set_ylim(0, max(max(ca), max(fa)) * 1.28)
+    a1.set_title("(a)  Intent incidence by room count",
+                 fontsize=10.5, fontweight="bold", loc="left")
+    a1.legend(frameon=False, fontsize=8.5)
+    ck = [R["dow"][d]["cpk"] for d in DOW_KEYS]
+    fk = [R["dow"][d]["fpk"] for d in DOW_KEYS]
+    a2.bar(np.arange(7) - w / 2, ck, w, color=TEAL, label="clicks / 1,000 listing-days")
+    a2.bar(np.arange(7) + w / 2, fk, w, color=GOLD, label="favorites / 1,000 listing-days")
+    for i in range(7):
+        a2.text(i - w / 2, ck[i] + 0.4, f"{ck[i]:.0f}", ha="center", fontsize=8,
+                color=TEAL, fontweight="bold")
+        a2.text(i + w / 2, fk[i] + 0.4, f"{fk[i]:.1f}", ha="center", fontsize=7.6,
+                color=GOLD, fontweight="bold")
+    a2.set_xticks(range(7)); a2.set_xticklabels(DAYS_EN)
+    a2.set_ylabel("intent per 1,000 listing-days"); a2.set_ylim(0, max(max(ck), max(fk)) * 1.2)
+    a2.set_title("(b)  Intent by day of week",
+                 fontsize=10.5, fontweight="bold", loc="left")
+    a2.legend(frameon=False, fontsize=8.5)
+    plt.tight_layout()
+    plt.savefig(out("fig_s2_dimensions.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_s2_dimensions.pdf")
+
+
+def build_exit_apartments():
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.4))
+    ev = [R["vpd_stay"], R["vpd_exit"]]
+    b = a1.bar(["Stayed on market", "Exited during window"], ev,
+               color=[GOLD, TEAL], width=0.55)
+    for bar, vv in zip(b, ev):
+        a1.text(bar.get_x() + bar.get_width() / 2, vv + 0.25, f"{vv}",
+                ha="center", fontweight="bold", fontsize=12)
+    top1 = max(ev) * 1.32
+    a1.set_ylabel("median new views / day"); a1.set_ylim(0, top1)
+    a1.set_title(f"(a)  {R['exit_gap']}\u00d7 the attention \u2014 before exit",
+                 fontsize=11, fontweight="bold", loc="left")
+    a1.text(0.5, top1 * 0.9,
+            f"first-week cohort; {R['exit_rate']:.0f}% exited by the final snapshot",
+            ha="center", fontsize=8, color=GREY)
+    labs = ["Early exit\n(<42 days)", "At renewal wall\n(42\u201344 days)",
+            "After renewal\n(>44 days)"]
+    shares = [R["exit_early_pct"], R["exit_wall_pct"], R["exit_late_pct"]]
+    vpds = [R["vpd_early_exit"], R["vpd_wall_exit"], R["vpd_late_exit"]]
+    cols = [GOLD, TEAL, RUST]
+    b = a2.bar(labs, shares, color=cols, width=0.6)
+    for bar, s, vv in zip(b, shares, vpds):
+        cx = bar.get_x() + bar.get_width() / 2
+        a2.text(cx, s + 1.6, f"{s}%", ha="center", fontweight="bold", fontsize=10.5)
+        a2.text(cx, max(s - 8, 3), f"VPD {vv}", ha="center", fontsize=8.2,
+                color="white" if s > 12 else INK, fontweight="bold")
+    a2.set_ylabel("share of exits"); a2.set_ylim(0, max(shares) * 1.16)
+    a2.set_title("(b)  Most exits are non-renewals at the 43-day term",
+                 fontsize=11, fontweight="bold", loc="left")
+    plt.tight_layout()
+    plt.savefig(out("fig_exit_apartments.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_exit_apartments.pdf")
+
+
+def build_exit_dims():
+    dd = R["districts"]
+    order = sorted(dd, key=lambda d: -dd[d]["absorp"])
+    ex = [dd[d]["absorp"] for d in order]
+    avg_ex = float(np.mean([dd[d]["absorp"] for d in dd]))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.2),
+                                 gridspec_kw={"width_ratios": [1.7, 1]})
+    cmap = LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD])
+    n = [(e - min(ex)) / (max(ex) - min(ex)) for e in ex]
+    a1.bar(range(len(order)), ex, color=[cmap(0.25 + 0.75 * v) for v in n], width=0.66)
+    for i, e in enumerate(ex):
+        a1.text(i, e + 1.2, f"{e:.0f}%", ha="center", fontsize=8.4, fontweight="bold")
+    a1.set_xticks(range(len(order)))
+    a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
+    extop = max(max(ex), avg_ex) * 1.16
+    a1.set_ylabel("% of week-one cohort exiting"); a1.set_ylim(0, extop)
+    a1.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
+    a1.text(len(order) - 0.5, avg_ex + 1.5, f"district avg {avg_ex:.0f}%",
+            fontsize=7.8, color=AVG, ha="right", fontweight="bold")
+    a1.set_title("(a)  Exit rate by district",
+                 fontsize=10.5, fontweight="bold", loc="left")
+    er = {int(k): v for k, v in R["exit_rooms"].items()}
+    ks2 = sorted(er)
+    b = a2.bar([f"{k}-rm" for k in ks2], [er[k] for k in ks2], color=GOLD, width=0.62)
+    for bar, k in zip(b, ks2):
+        a2.text(bar.get_x() + bar.get_width() / 2, er[k] + 1.2, f"{er[k]:.0f}%",
+                ha="center", fontweight="bold", fontsize=9.5)
+    a2.set_ylabel("% exiting"); a2.set_ylim(0, extop)
+    a2.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
+    a2.set_title("(b)  Exit rate by room count",
+                 fontsize=10.5, fontweight="bold", loc="left")
+    plt.tight_layout()
+    plt.savefig(out("fig_exit_dims.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_exit_dims.pdf")
+
+
+def build_tom_dims():
+    dd = R["districts"]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.3),
+                                 gridspec_kw={"width_ratios": [1.7, 1]})
+    order = sorted(dd, key=lambda d: dd[d]["age"])
+    ages = [dd[d]["age"] for d in order]
+    avg_age = float(np.mean([dd[d]["age"] for d in dd]))
+    cmap = LinearSegmentedColormap.from_list("p", ["#ece9f2", PURP])
+    nrm = [(a - min(ages)) / (max(ages) - min(ages)) for a in ages]
+    a1.barh(range(len(order)), ages, color=[cmap(0.2 + 0.8 * (1 - v)) for v in nrm],
+            height=0.68)
+    for i, a in enumerate(ages):
+        a1.text(a + 0.6, i, f"{a:.0f}", va="center", fontsize=8, fontweight="bold")
+    a1.set_yticks(range(len(order))); a1.set_yticklabels(order, fontsize=8.4)
+    a1.invert_yaxis()
+    a1.set_xlabel("median time on market (days)"); a1.set_xlim(0, max(ages) * 1.18)
+    a1.axvline(avg_age, color=AVG, lw=1.3, ls="--")
+    a1.text(avg_age + 0.5, len(order) - 0.5, f"avg {avg_age:.0f}",
+            fontsize=7.8, color=AVG, va="center", fontweight="bold")
+    a1.set_title("(a)  Time on market by district",
+                 fontsize=10.5, fontweight="bold", loc="left")
+    ar = {int(k): v for k, v in R["age_rooms"].items()}
+    ks3 = sorted(ar)
+    b = a2.bar([f"{k}-rm" for k in ks3], [ar[k] for k in ks3], color=PURP, width=0.62)
+    for bar, k in zip(b, ks3):
+        a2.text(bar.get_x() + bar.get_width() / 2, ar[k] + 1, f"{ar[k]}",
+                ha="center", fontweight="bold", fontsize=9.5)
+    a2.set_ylabel("median days on market"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.15)
+    a2.axhline(avg_age, color=AVG, lw=1.3, ls="--")
+    a2.set_title("(b)  Time on market by room count",
+                 fontsize=10.5, fontweight="bold", loc="left")
+    plt.tight_layout()
+    plt.savefig(out("fig_tom_dims.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_tom_dims.pdf")
+
+
+def build_metrics_panel_apartments():
+    d = R["districts"]; intent = R["intent_norm"]
+    rows = []
+    for dist in d:
+        rows.append(dict(district=dist, vpd=d[dist]["vpd"],
+                         click=intent[dist]["clicka"],
+                         exit=d[dist]["absorp"], age=d[dist]["age"]))
+    D = pd.DataFrame(rows).set_index("district").sort_values("vpd", ascending=False)
+    avg_row = dict(vpd=round(D.vpd.mean(), 1), click=round(D.click.mean(), 1),
+                   exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
+    cols = [("vpd", "Views & Velocity", "median new views / day", False, "{:.1f}"),
+            ("click", "Clicks & Saves", "% of listings w/ a click", False, "{:.0f}%"),
+            ("exit", "Exit Rate", "% of cohort exiting", False, "{:.0f}%"),
+            ("age", "Time on Market", "median days on market", True, "{:.0f}")]
+    cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
+             "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),
+             "exit": LinearSegmentedColormap.from_list("r2", ["#f4e6e2", RUST]),
+             "age": LinearSegmentedColormap.from_list("p", ["#ece9f2", PURP])}
+    colcolor = {"vpd": TEAL, "click": GOLD, "exit": RUST, "age": PURP}
+
+    def shade(vals, invert):
+        v = np.array(vals, float); lo, hi = v.min(), v.max()
+        n = (v - lo) / (hi - lo + 1e-9)
+        return 1 - n if invert else n
+
+    nrows = len(D) + 1
+    fig, ax = plt.subplots(figsize=(9.6, 7.8)); ax.axis("off")
+    ax.set_xlim(0, 4); ax.set_ylim(-1.4, nrows + 1.9)
+    ax.text(2, nrows + 1.5, "Four demand signals across Tashkent districts \u2014 apartments only",
+            ha="center", fontsize=13, fontweight="bold", color=INK)
+    ax.text(2, nrows + 1.08,
+            "Ordered by demand velocity. Each column shaded independently; "
+            "darker = stronger demand (Time on Market shaded inversely).",
+            ha="center", fontsize=7.6, color=GREY, style="italic")
+    for j, (key, title, sub, inv, fmt) in enumerate(cols):
+        n = shade(D[key], inv)
+        ax.text(j + 0.5, nrows + 0.2, title, ha="center", va="bottom", fontweight="bold",
+                fontsize=9.5, color=colcolor[key])
+        ax.text(j + 0.5, nrows - 0.18, sub, ha="center", fontsize=7.1, color=GREY)
+        for rr in range(len(D)):
+            val = D[key].iloc[rr]; c = cmaps[key](0.15 + 0.85 * n[rr])
+            tc = "white" if n[rr] > 0.55 else INK
+            ax.add_patch(plt.Rectangle((j + 0.06, nrows - 1 - rr - 0.4), 0.88, 0.8,
+                                       fc=c, ec="white", lw=1.6))
+            ax.text(j + 0.5, nrows - 1 - rr, fmt.format(val), ha="center",
+                    va="center", fontsize=9.3, color=tc,
+                    fontweight="bold" if n[rr] > 0.8 else "normal")
+        ax.add_patch(plt.Rectangle((j + 0.06, -0.4), 0.88, 0.8,
+                                   fc="#e6e6e6", ec="white", lw=1.6))
+        ax.text(j + 0.5, 0, fmt.format(avg_row[key]), ha="center", va="center",
+                fontsize=9.3, color=INK, fontweight="bold")
+    for rr in range(len(D)):
+        ax.text(-0.06, nrows - 1 - rr, D.index[rr], ha="right", va="center",
+                fontsize=9, color=INK)
+    ax.text(-0.06, 0, "DISTRICT AVERAGE", ha="right", va="center",
+            fontsize=8.5, color=INK, fontweight="bold")
+    ax.text(2, -1.15, SRC, ha="center", fontsize=7, color=GREY)
+    plt.tight_layout()
+    plt.savefig(out("fig_metrics_panel_apartments.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_metrics_panel_apartments.pdf")
+
+
+def build_demand_map():
+    d = R["districts"]; cc = R["centroids"]
+    asp = np.cos(np.radians(41.3))
+    BG = "#faf7f1"; PANEL = "#faf7f1"
+    BUBBLE = "#c17b38"
+
+    names = list(cc)
+    pos = np.array([[cc[k]["lon"], cc[k]["lat"]] for k in names], float)
+    orig = pos.copy()
+    reach = np.array([d[k]["reach"] for k in names], float)
+    maxr = reach.max()
+    rad = {names[i]: 0.004 + 0.0125 * (reach[i] / maxr) ** 0.5 for i in range(len(names))}
+    radarr = np.array([rad[k] for k in names])
+    for _ in range(400):
+        moved = 0
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                dx = (pos[j, 0] - pos[i, 0]) * asp; dy = pos[j, 1] - pos[i, 1]
+                dist = np.hypot(dx, dy); mind = (radarr[i] + radarr[j]) * 1.08
+                if 1e-9 < dist < mind:
+                    push = (mind - dist) / 2; ux, uy = dx / dist, dy / dist
+                    pos[i, 0] -= ux * push / asp; pos[i, 1] -= uy * push
+                    pos[j, 0] += ux * push / asp; pos[j, 1] += uy * push
+                    moved += 1
+        pos += (orig - pos) * 0.04
+        if moved == 0:
+            break
+    posd = {names[i]: tuple(pos[i]) for i in range(len(names))}
+
+    fig = plt.figure(figsize=(13.5, 8.4))
+    gs = gridspec.GridSpec(1, 2, width_ratios=[2.4, 1], wspace=0.03)
+    axm = fig.add_subplot(gs[0]); axr = fig.add_subplot(gs[1])
+
+    axm.set_facecolor(BG)
+    for s in axm.spines.values():
+        s.set_color("#eae4d8"); s.set_linewidth(1)
+    axm.set_xticks([]); axm.set_yticks([])
+    xs = [posd[k][0] for k in cc]; ys = [posd[k][1] for k in cc]
+    padx = (max(xs) - min(xs)) * 0.16; pady = (max(ys) - min(ys)) * 0.18
+    axm.set_xlim(min(xs) - padx, max(xs) + padx)
+    axm.set_ylim(min(ys) - pady, max(ys) + pady * 1.5)
+    axm.set_aspect(1 / asp)
+
+    pcloud = P.drop_duplicates("listing_id")[["longitude", "latitude"]].dropna()
+    pcloud = pcloud[(pcloud.latitude.between(*axm.get_ylim())) &
+                    (pcloud.longitude.between(*axm.get_xlim()))]
+    axm.scatter(pcloud.longitude, pcloud.latitude, s=2.5, color="#cbb68f",
+                alpha=0.30, zorder=1, linewidths=0)
+
+    for k in sorted(cc, key=lambda x: -d[x]["reach"]):
+        rr = rad[k]
+        e = Ellipse(posd[k], width=rr * 2 / asp, height=rr * 2, facecolor=BUBBLE,
+                    edgecolor="white", lw=2, zorder=3, alpha=0.97)
+        axm.add_patch(e)
+    for k in cc:
+        rr = rad[k]
+        below = {"Shayxontohur", "Mirobod", "Yakkasaroy"}
+        if k in below:
+            axm.text(posd[k][0], posd[k][1] - rr - 0.006, k, ha="center", va="top",
+                     fontsize=9.3, fontweight="bold", color=INK, zorder=5)
+        else:
+            axm.text(posd[k][0], posd[k][1] + rr + 0.006, k, ha="center", va="bottom",
+                     fontsize=9.3, fontweight="bold", color=INK, zorder=5)
+
+    axm.set_title("Reach (total new views)", fontsize=12, fontweight="bold",
+                  loc="right", color="#7a6a58", pad=8)
+
+    axr.set_facecolor(PANEL)
+    for s in axr.spines.values():
+        s.set_color("#eae4d8"); s.set_linewidth(1)
+    axr.set_xticks([]); axr.set_yticks([]); axr.set_xlim(0, 1); axr.set_ylim(0, 1)
+    axr.text(0.08, 0.955, "Districts by reach", fontsize=11.5,
+             fontweight="bold", color=INK)
+    axr.text(0.08, 0.925, "total new views (reach)", fontsize=8.5, color=GREY)
+    order = sorted(cc, key=lambda x: -d[x]["reach"])
+    rmax = max(d[k]["reach"] for k in cc)
+    y0 = 0.86; dy = 0.067
+    for i, k in enumerate(order):
+        y = y0 - i * dy; rv = d[k]["reach"]
+        axr.add_patch(plt.Rectangle((0.08, y - 0.011), 0.022, 0.022, fc=BUBBLE, ec="none"))
+        axr.text(0.125, y, k, fontsize=9.3, color=INK, va="center")
+        bw = 0.24 * rv / rmax
+        axr.add_patch(plt.Rectangle((0.56, y - 0.006), 0.24, 0.012, fc="#e7ded0", ec="none"))
+        axr.add_patch(plt.Rectangle((0.56, y - 0.006), max(bw, 0.004), 0.012, fc=BUBBLE, ec="none"))
+        axr.text(0.985, y, f"{rv:,}", fontsize=8.3, color=INK, va="center", ha="right",
+                 fontweight="bold")
+
+    fig.patch.set_facecolor("white")
+    fig.text(0.5, 0.03,
+             "Each district plotted at the median coordinates of its listings; "
+             "bubble size = reach (total new views). Faint dots: individual apartments. " + SRC,
+             ha="center", fontsize=7.2, color=GREY)
+    plt.savefig(out("fig_demand_map.pdf"), bbox_inches="tight", facecolor="white")
+    plt.close()
+    print("  fig_demand_map.pdf")
+
+
+def build_supply_demand_bands():
+    bl = ["<30k", "30-50k", "50-75k", "75-100k", "100-150k", "150-250k", "250k+"]
+    sup = [R["bands"][b]["supply"] for b in bl]
+    dem = [R["bands"][b]["medvpd"] for b in bl]
+    n = len(bl)
+    fig, ax1 = plt.subplots(figsize=(9, 4.8))
+    ax1.bar(range(n), sup, color="#e7e2da", edgecolor="#c9c2b6", width=0.72, zorder=2)
+    for i, s in enumerate(sup):
+        ax1.text(i, s + max(sup) * 0.02, f"{s}", ha="center", fontsize=8.5, color=GREY)
+    ax1.set_ylabel("Listings (supply)", fontsize=10); ax1.set_ylim(0, max(sup) * 1.14)
+    ax1.set_xticks(range(n)); ax1.set_xticklabels(bl, fontsize=9)
+    ax1.set_xlabel("Price band (USD)")
+    ax2 = ax1.twinx(); ax2.spines["top"].set_visible(False)
+    ax2.plot(range(n), dem, color=RUST, marker="o", lw=2.4, ms=7, zorder=3)
+    for i, dv in enumerate(dem):
+        ax2.text(i + 0.08, dv + 0.25, f"{dv}", fontsize=9, color=RUST, fontweight="bold")
+    ax2.set_ylabel("Median new views / day (demand)", color=RUST, fontsize=10)
+    ax2.tick_params(axis="y", colors=RUST); ax2.set_ylim(0, max(dem) * 1.18)
+    ax1.set_title("Supply clusters at \\$50\u2013150k; demand intensity peaks below \\$30k",
+                  fontsize=12, fontweight="bold", loc="left", pad=12)
+    fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
+    plt.tight_layout()
+    plt.savefig(out("fig_supply_demand_bands.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_supply_demand_bands.pdf")
+
+
+ALL_FIGURES = [
+    build_concentration_apartments,
+    build_s1_dimensions,
+    build_wedge_apartments,
+    build_intent_norm_districts,
+    build_s2_dimensions,
+    build_exit_apartments,
+    build_exit_dims,
+    build_tom_dims,
+    build_metrics_panel_apartments,
+    build_demand_map,
+    build_supply_demand_bands,
+]
+
+
+def main():
+    _load()
+    print("[figures_en] English figures:", len(ALL_FIGURES), "->", FIG_DIR)
+    for fn in ALL_FIGURES:
+        fn()
+    print("[figures_en] done")
+
+
+if __name__ == "__main__":
+    main()
