@@ -529,6 +529,197 @@ def build_supply_demand_bands():
     print("  fig_supply_demand_bands.pdf")
 
 
+def build_tightness_districts():
+    """Fig 12 — market tightness by district.
+
+    Tightness_j = (sum of new views) / (sum of active listing-days) across all
+    listings in district j (Eq. 3): aggregate attention per active listing-day.
+    Normalized reference = the same ratio for the whole city. Smallest-sample
+    districts (bottom 4 by listing count) are drawn in a separate colour, since
+    their ratios rest on thin data.
+    """
+    g = L.groupby("district").agg(nv=("nv", "sum"), days=("days_obs", "sum"),
+                                  nlist=("nv", "size"))
+    g = g[g.days > 0].copy()
+    g["tight"] = g.nv / g.days
+    city = float(L.nv.sum() / L.days_obs.sum())
+    g = g.sort_values("tight", ascending=False)
+    small = set(g.sort_values("nlist").index[:4])          # thin-sample districts
+    order = list(g.index)
+    vals = [g.tight[d] for d in order]
+    cols = [RUST if d in small else TEAL for d in order]
+
+    fig, ax = plt.subplots(figsize=(10.5, 4.9))
+    x = np.arange(len(order))
+    ax.bar(x, vals, color=cols, width=0.66)
+    for i, v in enumerate(vals):
+        ax.text(i, v + max(vals) * 0.015, f"{v:.1f}", ha="center", fontsize=8.4,
+                fontweight="bold")
+    ax.axhline(city, color=AVG, lw=1.4, ls="--")
+    ax.text(len(order) - 0.4, city + max(vals) * 0.02, f"city average {city:.1f}",
+            fontsize=8, color=AVG, ha="right", fontweight="bold")
+    ax.set_xticks(x); ax.set_xticklabels(order, rotation=32, ha="right", fontsize=8.6)
+    ax.set_ylabel("new views per active listing-day")
+    ax.set_ylim(0, max(vals) * 1.16)
+    ax.set_xlim(-0.7, len(order) - 0.3)
+    ax.set_title("Market tightness across districts",
+                 fontsize=12, fontweight="bold", loc="left")
+    from matplotlib.patches import Patch
+    ax.legend(handles=[Patch(fc=TEAL, label="well-sampled district"),
+                       Patch(fc=RUST, label="thin sample (bottom 4 by listing count)")],
+              frameon=False, fontsize=8.5, loc="upper right")
+    fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
+    plt.tight_layout()
+    plt.savefig(out("fig_tightness_districts.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_tightness_districts.pdf")
+
+
+def _hedonic():
+    """Hedonic panel + OLS fit for the promotion figure (Eq. 6).
+
+    Reads the raw CSVs directly (they carry floor/material/promotion columns the
+    core pipeline drops), rebuilds the listing-day panel with the same segment
+    and plausibility filters as pipeline.clean, forms daily new-view velocity per
+    interval, and fits ln(1+vpd) on characteristics + a paid-promotion flag +
+    day fixed effects by OLS (numpy lstsq; no statsmodels in this env).
+
+    Returns dict: r2, adj_fold (exp of promotion coef), raw_fold (unadjusted
+    mean ratio), n_obs, n_listings, promo_share.
+    """
+    need = ["listing_id", "snapshot_date", "category", "city", "district",
+            "price_usd", "area_m2", "rooms", "floor", "total_floors",
+            "is_new_building", "renovation", "building_material",
+            "is_vip", "is_premium", "is_urgently", "views"]
+    frames = []
+    for path, sd in config.CSV_INPUTS:
+        df = pd.read_csv(path, usecols=lambda c: c in need, low_memory=False)
+        if sd is not None:
+            df["snapshot_date"] = sd
+        frames.append(df)
+    df = pd.concat(frames, ignore_index=True)
+    for col in need:
+        if col not in df.columns:
+            df[col] = np.nan
+    df = df.drop_duplicates(subset=["listing_id", "snapshot_date"], keep="first")
+    df = df[(df.category == config.CATEGORY) & (df.city == config.CITY)].copy()
+    df = df[df.district.isin(config.DISTRICT_MAP)]
+    df["snapshot_date"] = pd.to_datetime(df.snapshot_date)
+    df["price_usd"] = pd.to_numeric(df.price_usd, errors="coerce")
+    df["area_m2"] = pd.to_numeric(df.area_m2, errors="coerce")
+    df["rooms_n"] = pd.to_numeric(df.rooms, errors="coerce")
+    df["views"] = pd.to_numeric(df.views, errors="coerce")
+    df["ppsm"] = df.price_usd / df.area_m2
+    b = config.BOUNDS
+    df = df[df.price_usd.between(*b["price_usd"]) & df.area_m2.between(*b["area_m2"])
+            & df.rooms_n.between(*b["rooms"]) & df.ppsm.between(*b["ppsm"])]
+
+    # listing-day new-view velocity over each observed interval
+    df = df.sort_values(["listing_id", "snapshot_date"])
+    grp = df.groupby("listing_id")
+    df["dv"] = grp["views"].diff().clip(lower=0)
+    df["gap"] = grp["snapshot_date"].diff().dt.days
+    d = df[(df.gap > 0) & df.dv.notna()].copy()
+    d["vpd_it"] = d.dv / d.gap
+
+    def b01(s):
+        m = {True: 1, False: 0, "true": 1, "false": 0, "t": 1, "f": 0,
+             "True": 1, "False": 0, 1: 1, 0: 0, "1": 1, "0": 0}
+        return pd.to_numeric(s.map(m), errors="coerce").fillna(0.0)
+
+    promo = ((b01(d.is_vip) + b01(d.is_premium) + b01(d.is_urgently)) > 0).astype(float)
+    d = d.assign(promo=promo.values)
+
+    y = np.log1p(d.vpd_it.to_numpy(float))
+    cols, names = [], []
+
+    def add(name, arr):
+        cols.append(np.asarray(arr, float)); names.append(name)
+
+    add("const", np.ones(len(d)))
+    add("ln_area", np.log(d.area_m2.to_numpy(float)))
+    add("ln_price", np.log(d.price_usd.to_numpy(float)))
+    fl = pd.to_numeric(d.floor, errors="coerce"); fl = fl.fillna(fl.median())
+    tf = pd.to_numeric(d.total_floors, errors="coerce"); tf = tf.fillna(tf.median())
+    add("floor", fl.to_numpy(float))
+    add("total_floors", tf.to_numpy(float))
+    add("new_build", b01(d.is_new_building).to_numpy(float))
+    add("promo", d.promo.to_numpy(float))
+    for pref, ser in [("rm", d.rooms_n.astype("Int64").astype(str)),
+                      ("reno", d.renovation.astype(str)),
+                      ("mat", d.building_material.astype(str)),
+                      ("day", d.snapshot_date.dt.strftime("%Y-%m-%d"))]:
+        du = pd.get_dummies(ser, prefix=pref, drop_first=True)
+        for c in du.columns:
+            add(c, du[c].to_numpy(float))
+
+    X = np.column_stack(cols)
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+    resid = y - X @ beta
+    ss_res = float((resid ** 2).sum())
+    ss_tot = float(((y - y.mean()) ** 2).sum())
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+    coef_promo = float(beta[names.index("promo")])
+    m1 = d.vpd_it[d.promo == 1].mean()
+    m0 = d.vpd_it[d.promo == 0].mean()
+    raw_fold = float(m1 / m0) if m0 > 0 else float("nan")
+    return dict(r2=r2, adj_fold=float(np.exp(coef_promo)), raw_fold=raw_fold,
+                n_obs=int(len(d)), n_listings=int(d.listing_id.nunique()),
+                promo_share=float(d.promo.mean() * 100))
+
+
+def build_hedonic_results():
+    """Fig 13 — what a hedonic model says about paid promotion.
+
+    (a) Effect of paid promotion on daily views: raw mean ratio vs. the
+        hedonic-adjusted multiple (exp of the promotion coefficient, holding
+        size, price, floor, building, room count, renovation, material and the
+        calendar day fixed).
+    (b) Share of the variation in ln(1+views) the observables explain (model
+        R^2) vs. what remains unexplained.
+    """
+    h = _hedonic()
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.4))
+
+    labs = ["Raw\n(unadjusted)", "Hedonic-\nadjusted"]
+    vals = [h["raw_fold"], h["adj_fold"]]
+    b = a1.bar(labs, vals, color=[GREY, TEAL], width=0.5)
+    for bar, v in zip(b, vals):
+        a1.text(bar.get_x() + bar.get_width() / 2, v + max(vals) * 0.02, f"{v:.2f}×",
+                ha="center", fontweight="bold", fontsize=12)
+    a1.set_ylabel("daily views vs. an identical non-promoted listing")
+    a1.set_ylim(0, max(vals) * 1.2)
+    a1.axhline(1, color=INK, lw=0.8, ls=":")
+    a1.set_title("(a)  Paid promotion multiplies daily views",
+                 fontsize=11, fontweight="bold", loc="left")
+    a1.text(0.5, max(vals) * 1.1,
+            f"n = {h['n_obs']:,} listing-days, {h['n_listings']:,} apartments; "
+            f"{h['promo_share']:.0f}% promoted",
+            ha="center", fontsize=7.6, color=GREY)
+
+    r2pct = h["r2"] * 100
+    parts = [r2pct, 100 - r2pct]
+    plabs = ["Explained by\nobservables", "Unexplained\n(demand signal + noise)"]
+    b = a2.bar(plabs, parts, color=[PURP, "#d9d4e2"], width=0.5)
+    for bar, v in zip(b, parts):
+        a2.text(bar.get_x() + bar.get_width() / 2, v + 1.5, f"{v:.1f}%",
+                ha="center", fontweight="bold", fontsize=12,
+                color=INK)
+    a2.set_ylabel("% of variation in ln(1 + daily views)")
+    a2.set_ylim(0, 100)
+    a2.set_title("(b)  Characteristics explain little of the variation",
+                 fontsize=11, fontweight="bold", loc="left")
+
+    fig.text(0.5, -0.03,
+             "Hedonic OLS of ln(1+daily views) on log area, log price, floor, "
+             "building height, new-build, room-count, renovation, material and "
+             "day fixed effects. " + SRC, ha="center", fontsize=7, color=GREY)
+    plt.tight_layout()
+    plt.savefig(out("fig_hedonic_results.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_hedonic_results.pdf")
+
+
 ALL_FIGURES = [
     build_concentration_apartments,
     build_s1_dimensions,
@@ -541,6 +732,8 @@ ALL_FIGURES = [
     build_metrics_panel_apartments,
     build_demand_map,
     build_supply_demand_bands,
+    build_tightness_districts,
+    build_hedonic_results,
 ]
 
 

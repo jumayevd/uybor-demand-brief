@@ -27,11 +27,13 @@ TABLE_ENV = "UYBOR_TABLE"
 DEFAULT_TABLE = "uybor_listings_v2"
 OUT = os.path.join(os.path.dirname(__file__), "data", "uybor_listings_v2.csv")
 
-# columns the pipeline reads (see report/README.md schema)
+# columns the pipeline reads (see report/README.md schema). The last row is
+# used only by the hedonic figure (figures_en); the core pipeline ignores them.
 COLUMNS = [
     "listing_id", "snapshot_date", "category", "city", "district",
     "price_usd", "area_m2", "rooms", "is_new_building", "renovation",
     "latitude", "longitude", "posted_at", "views", "clicks", "favorites",
+    "floor", "total_floors", "building_material", "is_vip", "is_premium", "is_urgently",
 ]
 
 
