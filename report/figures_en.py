@@ -530,44 +530,47 @@ def build_supply_demand_bands():
 
 
 def build_tightness_districts():
-    """Fig 12 — market tightness by district.
+    """Fig 12 — market tightness by district (horizontal).
 
     Tightness_j = (sum of new views) / (sum of active listing-days) across all
     listings in district j (Eq. 3): aggregate attention per active listing-day.
-    Normalized reference = the same ratio for the whole city. Smallest-sample
-    districts (bottom 4 by listing count) are drawn in a separate colour, since
-    their ratios rest on thin data.
+    The dashed reference line is the same ratio for the whole city. Districts
+    with fewer than 40 listings are drawn in a separate colour, since their
+    ratios rest on thin data.
     """
+    NMIN = 40
     g = L.groupby("district").agg(nv=("nv", "sum"), days=("days_obs", "sum"),
                                   nlist=("nv", "size"))
     g = g[g.days > 0].copy()
     g["tight"] = g.nv / g.days
     city = float(L.nv.sum() / L.days_obs.sum())
     g = g.sort_values("tight", ascending=False)
-    small = set(g.sort_values("nlist").index[:4])          # thin-sample districts
-    order = list(g.index)
-    vals = [g.tight[d] for d in order]
-    cols = [RUST if d in small else TEAL for d in order]
+    order = list(g.index)                    # highest tightness first
+    vals = [float(g.tight[d]) for d in order]
+    ns = [int(g.nlist[d]) for d in order]
+    cols = [GOLD if n < NMIN else TEAL for n in ns]
+    y = np.arange(len(order))[::-1]          # so the first entry sits at the top
 
-    fig, ax = plt.subplots(figsize=(10.5, 4.9))
-    x = np.arange(len(order))
-    ax.bar(x, vals, color=cols, width=0.66)
-    for i, v in enumerate(vals):
-        ax.text(i, v + max(vals) * 0.015, f"{v:.1f}", ha="center", fontsize=8.4,
-                fontweight="bold")
-    ax.axhline(city, color=AVG, lw=1.4, ls="--")
-    ax.text(len(order) - 0.4, city + max(vals) * 0.02, f"city average {city:.1f}",
-            fontsize=8, color=AVG, ha="right", fontweight="bold")
-    ax.set_xticks(x); ax.set_xticklabels(order, rotation=32, ha="right", fontsize=8.6)
-    ax.set_ylabel("new views per active listing-day")
-    ax.set_ylim(0, max(vals) * 1.16)
-    ax.set_xlim(-0.7, len(order) - 0.3)
-    ax.set_title("Market tightness across districts",
-                 fontsize=12, fontweight="bold", loc="left")
+    fig, ax = plt.subplots(figsize=(9.6, 5.4))
+    ax.barh(y, vals, color=cols, height=0.72, zorder=2)
+    xmax = max(max(vals), city) * 1.14
+    for yi, v, n in zip(y, vals, ns):
+        ax.text(xmax * 0.008, yi, f"n={n}", va="center", ha="left",
+                fontsize=7, color="white", fontweight="bold", zorder=4)
+        ax.text(v + xmax * 0.012, yi, f"{v:.1f}", va="center", ha="left",
+                fontsize=8.6, color=INK, fontweight="bold")
+    ax.axvline(city, color=AVG, lw=1.3, ls="--", zorder=3)
+    ax.text(city, len(order) - 0.35, f"city average {city:.1f}", ha="center",
+            va="bottom", fontsize=8, color=AVG, fontweight="bold")
+    ax.set_yticks(y); ax.set_yticklabels(order, fontsize=9)
+    ax.set_xlim(0, xmax); ax.set_ylim(-0.7, len(order) - 0.2)
+    ax.set_xlabel("market tightness:  new views per active listing-day")
+    ax.set_title("Market tightness by district",
+                 fontsize=12.5, fontweight="bold", loc="left", pad=14)
     from matplotlib.patches import Patch
-    ax.legend(handles=[Patch(fc=TEAL, label="well-sampled district"),
-                       Patch(fc=RUST, label="thin sample (bottom 4 by listing count)")],
-              frameon=False, fontsize=8.5, loc="upper right")
+    ax.legend(handles=[Patch(fc=TEAL, label=f"n ≥ {NMIN} listings"),
+                       Patch(fc=GOLD, label=f"n < {NMIN} listings (interpret with caution)")],
+              frameon=False, fontsize=8.2, loc="lower right")
     fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_tightness_districts.pdf"), bbox_inches="tight")
