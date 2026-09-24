@@ -13,5 +13,6 @@ report/build/
 report/figures/
 report/figures_en/
 report/figures_png/
+report/figures_en_png/
 report/png/
 *.zip

@@ -100,27 +100,25 @@ def _header():
             f"{w['n_listings']:,} e'lon  ·  {w['n_days']} kesim")
 
 
-def main(argv=None):
-    token = os.environ.get(TOKEN_ENV)
-    chat = os.environ.get(CHAT_ENV, DEFAULT_CHAT)
-    if not token:
-        print(f"SEND FAILED: ${TOKEN_ENV} is not set", file=sys.stderr)
-        return 1
+def deliver(token, chat, fig_dir, figures, header_text, png_dir):
+    """Post one figure set (PNG preview + vector PDF each) to a channel.
 
-    present = [(n, cap) for (n, cap) in FIGURES
-               if os.path.exists(os.path.join(FIG_DIR, n + ".pdf"))]
+    Shared by the Uzbek (send_telegram) and English (send_telegram_en) senders.
+    """
+    present = [(n, cap) for (n, cap) in figures
+               if os.path.exists(os.path.join(fig_dir, n + ".pdf"))]
     if not present:
-        print(f"SEND FAILED: no figures found in {FIG_DIR}", file=sys.stderr)
+        print(f"SEND FAILED: no figures found in {fig_dir}", file=sys.stderr)
         return 1
 
-    os.makedirs(PNG_DIR, exist_ok=True)
+    os.makedirs(png_dir, exist_ok=True)
     try:
         _api(token, "sendMessage",
-             {"chat_id": chat, "text": _header(), "parse_mode": "Markdown"})
+             {"chat_id": chat, "text": header_text, "parse_mode": "Markdown"})
         time.sleep(GAP)
         for name, caption in present:
-            pdf = os.path.join(FIG_DIR, name + ".pdf")
-            png = os.path.join(PNG_DIR, name + ".png")
+            pdf = os.path.join(fig_dir, name + ".pdf")
+            png = os.path.join(png_dir, name + ".png")
             _rasterize(pdf, png)
             # PNG preview (inline) ...
             _api(token, "sendPhoto", {"chat_id": chat, "caption": caption},
@@ -136,6 +134,15 @@ def main(argv=None):
 
     print(f"[telegram] sent {len(present)} figures (PNG + PDF) to {chat}")
     return 0
+
+
+def main(argv=None):
+    token = os.environ.get(TOKEN_ENV)
+    chat = os.environ.get(CHAT_ENV, DEFAULT_CHAT)
+    if not token:
+        print(f"SEND FAILED: ${TOKEN_ENV} is not set", file=sys.stderr)
+        return 1
+    return deliver(token, chat, FIG_DIR, FIGURES, _header(), PNG_DIR)
 
 
 if __name__ == "__main__":

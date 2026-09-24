@@ -21,7 +21,7 @@ concurrency:
 jobs:
   report:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: report
@@ -37,10 +37,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Pull v2, build 13 figures, send to Telegram
+      - name: Pull v2, build Uzbek + English figures, send both to Telegram
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT: ${{ vars.TELEGRAM_CHAT || '@chart_automation' }}
+          TELEGRAM_CHAT_EN: ${{ vars.TELEGRAM_CHAT_EN || '' }}
         run: python daily_report.py
