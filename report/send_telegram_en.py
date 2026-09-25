@@ -24,29 +24,29 @@ PNG_DIR = os.path.join(HERE, "figures_en_png")
 METRICS = os.path.join(HERE, "build", "metrics.json")
 CHAT_EN_ENV = "TELEGRAM_CHAT_EN"
 
-# fixed send order + English caption per figure (11 paper figures + tightness + hedonic)
+# exactly the paper's figures, in the paper's order, with the paper's captions
+# (Housing_Demand draft: Figures 1-12; the hedonic figure is not in the paper)
 FIGURES = [
-    ("fig_concentration_apartments", "Demand-velocity distribution & top-10% share"),
-    ("fig_s1_dimensions", "Velocity by rooms / building type / weekday"),
-    ("fig_wedge_apartments", "Velocity & intent by price quintile"),
-    ("fig_demand_map", "Demand map: bubble size = reach (total new views)"),
-    ("fig_intent_norm_districts", "Normalized intent by district"),
-    ("fig_s2_dimensions", "Intent by rooms / weekday"),
-    ("fig_exit_apartments", "Exit-velocity gap & 43-day decomposition"),
-    ("fig_exit_dims", "Exit probability by district / rooms"),
-    ("fig_tom_dims", "Time on market by district / rooms"),
-    ("fig_metrics_panel_apartments", "Four demand signals — district heatmap"),
-    ("fig_supply_demand_bands", "Supply vs demand by price band"),
-    ("fig_tightness_districts", "Market tightness by district"),
-    ("fig_hedonic_results", "Hedonic results: paid-promotion effect & R²"),
+    ("fig_concentration_apartments", "Figure 1. Distribution of view velocity and concentration of attention"),
+    ("fig_s1_dimensions", "Figure 2. View velocity across market segments"),
+    ("fig_wedge_apartments", "Figure 3. The wedge between price and demand"),
+    ("fig_demand_map", "Figure 4. Geographic distribution of demand reach in Tashkent"),
+    ("fig_intent_norm_districts", "Figure 5. Normalized purchase intent across districts"),
+    ("fig_s2_dimensions", "Figure 6. Purchase intent across market segments"),
+    ("fig_exit_apartments", "Figure 7. Market exit probability and its (weak) association with demand"),
+    ("fig_exit_dims", "Figure 8. Market exit probability across segments"),
+    ("fig_tom_dims", "Figure 9. Time on market (apartments)"),
+    ("fig_metrics_panel_apartments", "Figure 10. Heatmap of the four demand signals"),
+    ("fig_supply_demand_bands", "Figure 11. Distribution of demand and supply across price segments"),
+    ("fig_tightness_districts", "Figure 12. Market tightness across districts"),
 ]
 
 
 def _header():
     if not os.path.exists(METRICS):
-        return "Uybor apartments — daily demand figures (English)"
+        return "Uybor apartments — paper figures (English)"
     w = json.load(open(METRICS, encoding="utf-8"))["window"]
-    return ("\U0001F4CA *Uybor apartments — daily demand figures (English)*\n"
+    return ("\U0001F4CA *Uybor apartments — working-paper figures (English)*\n"
             f"{w['date_min']} → {w['date_max']}  ·  "
             f"{w['n_listings']:,} listings  ·  {w['n_days']} snapshots")
 

@@ -1,18 +1,26 @@
 ---
 name: uybor-report-en
 
-# Dispatch-only. Builds the ENGLISH paper figures on the latest live data and
-# uploads them (PDF + JPG) as a downloadable artifact. Does not touch Telegram.
+# Posts exactly the working-paper figures (English) to the Telegram channel once
+# a day at ~07:00 Asia/Tashkent (02:00 UTC), plus manual dispatch. GitHub's
+# scheduler is best-effort and may lag by a few minutes to ~an hour. The Uzbek
+# set posts separately at 06:00 (report.yml), so the two never collide.
 on:  # yamllint disable-line rule:truthy
+  schedule:
+    - cron: "0 2 * * *"   # 07:00 Asia/Tashkent
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
+concurrency:
+  group: uybor-report-en
+  cancel-in-progress: false
+
 jobs:
   figures-en:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: report
@@ -28,15 +36,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Pull latest v2, build metrics, render English figures (PDF + JPG)
+      - name: Pull v2, build English paper figures, send to Telegram
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}
-        run: python build_en.py
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT: ${{ vars.TELEGRAM_CHAT || '@chart_automation' }}
+          TELEGRAM_CHAT_EN: ${{ vars.TELEGRAM_CHAT_EN || '' }}
+        run: python daily_report_en.py
 
       - name: Upload English figures
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: english-figures
           path: report/figures_en/*
-          if-no-files-found: error
+          if-no-files-found: warn
