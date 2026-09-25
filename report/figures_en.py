@@ -398,7 +398,6 @@ def build_metrics_panel_apartments():
                 fontsize=9, color=INK)
     ax.text(-0.06, 0, "DISTRICT AVERAGE", ha="right", va="center",
             fontsize=8.5, color=INK, fontweight="bold")
-    ax.text(2, -1.15, SRC, ha="center", fontsize=7, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_metrics_panel_apartments.pdf"), bbox_inches="tight")
     plt.close()
@@ -495,7 +494,7 @@ def build_demand_map():
     fig.patch.set_facecolor("white")
     fig.text(0.5, 0.03,
              "Each district plotted at the median coordinates of its listings; "
-             "bubble size = reach (total new views). Faint dots: individual apartments. " + SRC,
+             "bubble size = reach (total new views). Faint dots: individual apartments.",
              ha="center", fontsize=7.2, color=GREY)
     plt.savefig(out("fig_demand_map.pdf"), bbox_inches="tight", facecolor="white")
     plt.close()
@@ -522,7 +521,6 @@ def build_supply_demand_bands():
     ax2.tick_params(axis="y", colors=RUST); ax2.set_ylim(0, max(dem) * 1.18)
     ax1.set_title("Supply clusters at \\$50\u2013150k; demand intensity peaks below \\$30k",
                   fontsize=12, fontweight="bold", loc="left", pad=12)
-    fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_supply_demand_bands.pdf"), bbox_inches="tight")
     plt.close()
@@ -571,7 +569,6 @@ def build_tightness_districts():
     ax.legend(handles=[Patch(fc=TEAL, label=f"n ≥ {NMIN} listings"),
                        Patch(fc=GOLD, label=f"n < {NMIN} listings (interpret with caution)")],
               frameon=False, fontsize=8.2, loc="lower right")
-    fig.text(0.5, -0.02, SRC, ha="center", fontsize=7.3, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_tightness_districts.pdf"), bbox_inches="tight")
     plt.close()
@@ -716,7 +713,7 @@ def build_hedonic_results():
     fig.text(0.5, -0.03,
              "Hedonic OLS of ln(1+daily views) on log area, log price, floor, "
              "building height, new-build, room-count, renovation, material and "
-             "day fixed effects. " + SRC, ha="center", fontsize=7, color=GREY)
+             "day fixed effects.", ha="center", fontsize=7, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_hedonic_results.pdf"), bbox_inches="tight")
     plt.close()
