@@ -287,7 +287,7 @@ def build_exit_dims():
     a1.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     a1.text(len(order) - 0.5, avg_ex + 1.5, f"district avg {avg_ex:.0f}%",
             fontsize=7.8, color=AVG, ha="right", fontweight="bold")
-    a1.set_title("(a)  Exit rate by district",
+    a1.set_title("(a)  Exit probability by district",
                  fontsize=10.5, fontweight="bold", loc="left")
     er = {int(k): v for k, v in R["exit_rooms"].items()}
     ks2 = sorted(er)
@@ -297,7 +297,7 @@ def build_exit_dims():
                 ha="center", fontweight="bold", fontsize=9.5)
     a2.set_ylabel("% exiting"); a2.set_ylim(0, extop)
     a2.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
-    a2.set_title("(b)  Exit rate by room count",
+    a2.set_title("(b)  Exit probability by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
     plt.savefig(out("fig_exit_dims.pdf"), bbox_inches="tight")
@@ -354,7 +354,7 @@ def build_metrics_panel_apartments():
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Views & Velocity", "median new views / day", False, "{:.1f}"),
             ("click", "Clicks & Saves", "% of listings w/ a click", False, "{:.0f}%"),
-            ("exit", "Exit Rate", "% of cohort exiting", False, "{:.0f}%"),
+            ("exit", "Exit Probability", "% of cohort exiting", False, "{:.0f}%"),
             ("age", "Time on Market", "median days on market", True, "{:.0f}")]
     cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
              "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),

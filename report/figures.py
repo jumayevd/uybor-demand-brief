@@ -352,7 +352,7 @@ def build_metrics_panel_apartments():
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Talab tezligi", "yangi ko'rishlar / kun", False, "{:.1f}"),
             ("click", "Klik olgan va\nsaqlanganlar ulushi", "klik olgan e'lon, %", False, "{:.0f}%"),
-            ("exit", "Bozordan chiqish\ndarajasi", "guruh chiqishi, %", False, "{:.0f}%"),
+            ("exit", "Bozordan chiqish\nehtimoli", "guruh chiqishi, %", False, "{:.0f}%"),
             ("age", "Bozorda qolish\nmuddati", "mediana faol kun", True, "{:.0f}")]
     cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
              "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),

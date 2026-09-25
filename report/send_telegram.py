@@ -45,7 +45,7 @@ FIGURES = [
     ("fig_intent_norm_districts", "Tumanlar bo'yicha normalangan niyat"),
     ("fig_s2_dimensions", "Niyat: xonalar soni / hafta kuni"),
     ("fig_exit_apartments", "Chiqish tezlik farqi va 43-kunlik dekompozitsiya"),
-    ("fig_exit_dims", "Chiqish darajasi: tuman / xonalar soni"),
+    ("fig_exit_dims", "Chiqish ehtimoli: tuman / xonalar soni"),
     ("fig_tom_dims", "Zaxira yoshi: tuman / xonalar soni"),
     ("fig_metrics_panel_apartments", "To'rt talab signali issiqlik xaritasi"),
     ("fig_supply_demand_bands", "Narx oralig'i bo'yicha taklif va talab"),

@@ -33,7 +33,7 @@ FIGURES = [
     ("fig_intent_norm_districts", "Normalized intent by district"),
     ("fig_s2_dimensions", "Intent by rooms / weekday"),
     ("fig_exit_apartments", "Exit-velocity gap & 43-day decomposition"),
-    ("fig_exit_dims", "Exit rate by district / rooms"),
+    ("fig_exit_dims", "Exit probability by district / rooms"),
     ("fig_tom_dims", "Time on market by district / rooms"),
     ("fig_metrics_panel_apartments", "Four demand signals — district heatmap"),
     ("fig_supply_demand_bands", "Supply vs demand by price band"),
