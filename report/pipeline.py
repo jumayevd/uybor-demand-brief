@@ -130,15 +130,35 @@ def metrics(apt, L):
     R["views_per_fav"] = int(L.nv.sum() / max(L.nf.sum(), 1))
     R["clicks_per_fav"] = round(float(L.nc.sum() / max(L.nf.sum(), 1)), 1)
 
-    # ---- SIGNAL 3: exit probability (cohort method) ----
+    # ---- SIGNAL 3: exit probability (hazard method) ----
+    # Exit probability over a period = (exits) / (active listing-days) * period_days.
+    # A listing "exits" when its last snapshot precedes the terminal snapshot; its
+    # active listing-days are the days it was observed (exposure). The daily exit
+    # hazard scaled by EXIT_PERIOD_DAYS gives a monthly exit probability, which is
+    # what every exit figure reports. (period_days = window length would exceed
+    # 100%, so a 30-day month is used.)
+    EXIT_PERIOD_DAYS = 30
+    R["exit_period_days"] = EXIT_PERIOD_DAYS
     dates = sorted(apt.snapshot_date.unique())
     wk1 = dates[0] + pd.Timedelta(days=6)      # first-week cohort cutoff
-    final = dates[-1]                          # terminal snapshot
+    final = pd.Timestamp(dates[-1])            # terminal snapshot
     present_final = set(apt[apt.snapshot_date == final].listing_id.unique())
     cohort = set(apt[apt.snapshot_date <= wk1].listing_id.unique())
     exited = cohort - present_final
     R["cohort_n"] = len(cohort); R["exit_n"] = len(exited)
-    R["exit_probability"] = round(len(exited) / len(cohort) * 100, 0)
+    # first-week cohort's cumulative exit share (used only for the velocity-gap caption)
+    R["cohort_exit_share"] = round(len(exited) / len(cohort) * 100, 0)
+
+    # hazard-based exit probability (all listings, exposure-weighted)
+    L["exited_all"] = L.d1 < final
+    L["exposure"] = L.days_obs.clip(lower=1)
+
+    def exit_prob(mask):
+        s = L[mask]
+        ad = float(s.exposure.sum())
+        return (int(s.exited_all.sum()) / ad * EXIT_PERIOD_DAYS * 100) if ad > 0 else float("nan")
+
+    R["exit_probability"] = round(exit_prob(L.exited_all.notna()), 0)
     L["exited"] = L.index.isin(exited); L["incohort"] = L.index.isin(cohort)
     sub = L[L.incohort]
     R["vpd_exit"] = round(float(sub[sub.exited].vpd.median()), 1)
@@ -194,8 +214,8 @@ def metrics(apt, L):
     R["rooms_dims"] = {int(k): dict(vpd=round(float(v.vpd), 1), n=int(v.n),
                                     clicka=round(float(v.clicka), 1),
                                     fava=round(float(v.fava), 1)) for k, v in rm.iterrows()}
-    er = sub[sub.rn.between(1, 5)].groupby("rn").exited.mean() * 100
-    R["exit_rooms"] = {int(k): round(float(v), 0) for k, v in er.items()}
+    R["exit_rooms"] = {int(k): round(exit_prob((L.rn == k)), 0)
+                       for k in range(1, 6) if (L.rn == k).any()}
     sa = act[act.rn.between(1, 5)].groupby("rn").age.median()
     R["age_rooms"] = {int(k): int(v) for k, v in sa.items()}
     last = apt.sort_values("snapshot_date").groupby("listing_id").last()
@@ -220,8 +240,7 @@ def metrics(apt, L):
     dd = {}
     for d in sorted(L.district.unique()):
         ld = L[L.district == d]
-        ids = set(apt[(apt.snapshot_date <= wk1) & (apt.district_en == d)].listing_id.unique())
-        exr = len(ids - present_final) / len(ids) * 100 if ids else np.nan
+        exr = exit_prob(L.district == d)   # monthly exit probability (hazard-based)
         ag = act[act.district_en == d].age.median()
         comp_d = ld.loc[ld.exited & ld.tom_completed.ge(0), "tom_completed"].median()
         dd[d] = dict(vpd=round(float(ld.vpd.median()), 1),

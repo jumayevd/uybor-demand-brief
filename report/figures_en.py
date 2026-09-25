@@ -246,7 +246,7 @@ def build_exit_apartments():
     a1.set_title(f"(a)  {R['exit_gap']}\u00d7 the attention \u2014 before exit",
                  fontsize=11, fontweight="bold", loc="left")
     a1.text(0.5, top1 * 0.9,
-            f"first-week cohort; {R['exit_probability']:.0f}% exited by the final snapshot",
+            f"first-week cohort; {R['cohort_exit_share']:.0f}% had exited by the final snapshot",
             ha="center", fontsize=8, color=GREY)
     labs = ["Early exit\n(<42 days)", "At renewal wall\n(42\u201344 days)",
             "After renewal\n(>44 days)"]
@@ -283,7 +283,7 @@ def build_exit_dims():
     a1.set_xticks(range(len(order)))
     a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
     extop = max(max(ex), avg_ex) * 1.16
-    a1.set_ylabel("% of week-one cohort exiting"); a1.set_ylim(0, extop)
+    a1.set_ylabel("monthly exit probability (%)"); a1.set_ylim(0, extop)
     a1.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     a1.text(len(order) - 0.5, avg_ex + 1.5, f"district avg {avg_ex:.0f}%",
             fontsize=7.8, color=AVG, ha="right", fontweight="bold")
@@ -295,7 +295,7 @@ def build_exit_dims():
     for bar, k in zip(b, ks2):
         a2.text(bar.get_x() + bar.get_width() / 2, er[k] + 1.2, f"{er[k]:.0f}%",
                 ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("% exiting"); a2.set_ylim(0, extop)
+    a2.set_ylabel("monthly exit probability (%)"); a2.set_ylim(0, extop)
     a2.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     a2.set_title("(b)  Exit probability by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
@@ -354,7 +354,7 @@ def build_metrics_panel_apartments():
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Views & Velocity", "median new views / day", False, "{:.1f}"),
             ("click", "Clicks & Saves", "% of listings w/ a click", False, "{:.0f}%"),
-            ("exit", "Exit Probability", "% of cohort exiting", False, "{:.0f}%"),
+            ("exit", "Exit Probability", "monthly, % of active stock", False, "{:.0f}%"),
             ("age", "Time on Market", "median days on market", True, "{:.0f}")]
     cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
              "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),

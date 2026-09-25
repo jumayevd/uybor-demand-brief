@@ -287,7 +287,7 @@ def build_exit_dims():
     a1.set_xticks(range(len(order)))
     a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
     extop = max(max(ex), avg_ex) * 1.16
-    a1.set_ylabel("guruhni tark etish ulushi, %"); a1.set_ylim(0, extop)
+    a1.set_ylabel("oylik chiqish ehtimoli, %"); a1.set_ylim(0, extop)
     a1.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     a1.text(len(order) - 0.5, avg_ex + 1.5, f"tuman o'rtachasi {avg_ex:.0f}%",
             fontsize=7.8, color=AVG, ha="right", fontweight="bold")
@@ -297,7 +297,7 @@ def build_exit_dims():
     for bar, k in zip(b, ks2):
         a2.text(bar.get_x() + bar.get_width() / 2, er[k] + 1.2, f"{er[k]:.0f}%",
                 ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("chiqish ulushi, %"); a2.set_ylim(0, extop)
+    a2.set_ylabel("oylik chiqish ehtimoli, %"); a2.set_ylim(0, extop)
     a2.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     plt.tight_layout()
     plt.savefig(out("fig_exit_dims.pdf"), bbox_inches="tight")
@@ -352,7 +352,7 @@ def build_metrics_panel_apartments():
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Talab tezligi", "yangi ko'rishlar / kun", False, "{:.1f}"),
             ("click", "Klik olgan va\nsaqlanganlar ulushi", "klik olgan e'lon, %", False, "{:.0f}%"),
-            ("exit", "Bozordan chiqish\nehtimoli", "guruh chiqishi, %", False, "{:.0f}%"),
+            ("exit", "Bozordan chiqish\nehtimoli", "oylik, faol zaxira %", False, "{:.0f}%"),
             ("age", "Bozorda qolish\nmuddati", "mediana faol kun", True, "{:.0f}")]
     cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
              "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),
