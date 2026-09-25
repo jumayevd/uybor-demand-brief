@@ -52,7 +52,7 @@ def verify():
     print("\n[verify] asosiy raqamlar (kunlik sanity-check):")
     print(f"  kvartiralar: {w['n_listings']}  e'lon-kun: {w['n_obs']}  jami ko'rish: {R['tot_views']}")
     print(f"  mediana tezlik: {R['med_vpd']}  top-10 konsentratsiya: {R['top10']}%")
-    print(f"  chiqish darajasi: {R['exit_rate']}%  chiqish farqi: {R['exit_gap']}x")
+    print(f"  chiqish ehtimoli: {R['exit_probability']}%  chiqish farqi: {R['exit_gap']}x")
     print(f"  CTR: {R['ctr']}%  bosishlar: {R['tot_clicks']}  saqlashlar: {R['tot_favs']}")
     print(f"  davr: {w['date_min']} -> {w['date_max']} ({w['n_days']} kesim)")
     return not missing and not extra

@@ -14,7 +14,7 @@ Writes:  build/L.pkl        one row per listing (listing-level signals)
 The four demand SIGNALS (see README for the research behind each):
   Signal 1  Views & view velocity   — breadth + current intensity of attention
   Signal 2  Clicks & saves          — deliberate, scarce intent
-  Signal 3  Exit rate               — flow of stock leaving the market
+  Signal 3  Exit probability        — flow of stock leaving the market
   Signal 4  Time on market          — duration face of demand
 
 Everything downstream (figures, paper) reads ONLY metrics.json + L.pkl + P.pkl,
@@ -130,7 +130,7 @@ def metrics(apt, L):
     R["views_per_fav"] = int(L.nv.sum() / max(L.nf.sum(), 1))
     R["clicks_per_fav"] = round(float(L.nc.sum() / max(L.nf.sum(), 1)), 1)
 
-    # ---- SIGNAL 3: exit rate (cohort method) ----
+    # ---- SIGNAL 3: exit probability (cohort method) ----
     dates = sorted(apt.snapshot_date.unique())
     wk1 = dates[0] + pd.Timedelta(days=6)      # first-week cohort cutoff
     final = dates[-1]                          # terminal snapshot
@@ -138,7 +138,7 @@ def metrics(apt, L):
     cohort = set(apt[apt.snapshot_date <= wk1].listing_id.unique())
     exited = cohort - present_final
     R["cohort_n"] = len(cohort); R["exit_n"] = len(exited)
-    R["exit_rate"] = round(len(exited) / len(cohort) * 100, 0)
+    R["exit_probability"] = round(len(exited) / len(cohort) * 100, 0)
     L["exited"] = L.index.isin(exited); L["incohort"] = L.index.isin(cohort)
     sub = L[L.incohort]
     R["vpd_exit"] = round(float(sub[sub.exited].vpd.median()), 1)

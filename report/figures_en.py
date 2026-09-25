@@ -246,7 +246,7 @@ def build_exit_apartments():
     a1.set_title(f"(a)  {R['exit_gap']}\u00d7 the attention \u2014 before exit",
                  fontsize=11, fontweight="bold", loc="left")
     a1.text(0.5, top1 * 0.9,
-            f"first-week cohort; {R['exit_rate']:.0f}% exited by the final snapshot",
+            f"first-week cohort; {R['exit_probability']:.0f}% exited by the final snapshot",
             ha="center", fontsize=8, color=GREY)
     labs = ["Early exit\n(<42 days)", "At renewal wall\n(42\u201344 days)",
             "After renewal\n(>44 days)"]
