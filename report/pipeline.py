@@ -159,6 +159,18 @@ def metrics(apt, L):
         return (int(s.exited_all.sum()) / ad * EXIT_PERIOD_DAYS * 100) if ad > 0 else float("nan")
 
     R["exit_probability"] = round(exit_prob(L.exited_all.notna()), 0)
+
+    # Fig 7a: demand (view velocity) of truly-exiting vs. still-active journeys.
+    # "true exit" excludes administrative 43-44 day term expirations (treatment A).
+    lo_t, hi_t = config.LISTING_TERM_DAYS
+    tom_all = (L.d1 - L.posted).dt.days
+    active_mask = ~L.exited_all                                 # present at final snapshot
+    trueexit_mask = L.exited_all & ~tom_all.between(lo_t, hi_t)  # genuine departures
+    R["vpd_active_med"] = round(float(L[active_mask].vpd.median()), 1)
+    R["vpd_active_mean"] = round(float(L[active_mask].vpd.mean()), 1)
+    R["vpd_trueexit_med"] = round(float(L[trueexit_mask].vpd.median()), 1)
+    R["vpd_trueexit_mean"] = round(float(L[trueexit_mask].vpd.mean()), 1)
+
     L["exited"] = L.index.isin(exited); L["incohort"] = L.index.isin(cohort)
     sub = L[L.incohort]
     R["vpd_exit"] = round(float(sub[sub.exited].vpd.median()), 1)

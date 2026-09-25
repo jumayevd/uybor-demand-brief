@@ -235,30 +235,28 @@ def build_s2_dimensions():
 
 def build_exit_apartments():
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.4))
-    ev = [R["vpd_stay"], R["vpd_exit"]]
-    b = a1.bar(["Stayed on market", "Exited during window"], ev,
+    # (a) demand (view velocity) of still-active vs. truly-exiting journeys
+    meds = [R["vpd_active_med"], R["vpd_trueexit_med"]]
+    means = [R["vpd_active_mean"], R["vpd_trueexit_mean"]]
+    b = a1.bar(["Still active\n(censored)", "Exited\n(true exit)"], meds,
                color=[GOLD, TEAL], width=0.55)
-    for bar, vv in zip(b, ev):
-        a1.text(bar.get_x() + bar.get_width() / 2, vv + 0.25, f"{vv}",
-                ha="center", fontweight="bold", fontsize=12)
-    top1 = max(ev) * 1.32
-    a1.set_ylabel("median new views / day"); a1.set_ylim(0, top1)
-    a1.set_title(f"(a)  {R['exit_gap']}\u00d7 the attention \u2014 before exit",
+    top1 = max(meds) * 1.6
+    for bar, md, mn in zip(b, meds, means):
+        a1.text(bar.get_x() + bar.get_width() / 2, md + top1 * 0.04,
+                f"median {md}\n(mean {mn})", ha="center", va="bottom",
+                fontweight="bold", fontsize=9.5)
+    a1.set_ylabel("median new views per day"); a1.set_ylim(0, top1)
+    a1.set_title("(a)  Demand of exited vs. surviving listings",
                  fontsize=11, fontweight="bold", loc="left")
-    a1.text(0.5, top1 * 0.9,
-            f"first-week cohort; {R['cohort_exit_share']:.0f}% had exited by the final snapshot",
-            ha="center", fontsize=8, color=GREY)
+    # (b) exit timing around the 43-day platform term (no per-bar VPD labels)
     labs = ["Early exit\n(<42 days)", "At renewal wall\n(42\u201344 days)",
             "After renewal\n(>44 days)"]
     shares = [R["exit_early_pct"], R["exit_wall_pct"], R["exit_late_pct"]]
-    vpds = [R["vpd_early_exit"], R["vpd_wall_exit"], R["vpd_late_exit"]]
     cols = [GOLD, TEAL, RUST]
     b = a2.bar(labs, shares, color=cols, width=0.6)
-    for bar, s, vv in zip(b, shares, vpds):
-        cx = bar.get_x() + bar.get_width() / 2
-        a2.text(cx, s + 1.6, f"{s}%", ha="center", fontweight="bold", fontsize=10.5)
-        a2.text(cx, max(s - 8, 3), f"VPD {vv}", ha="center", fontsize=8.2,
-                color="white" if s > 12 else INK, fontweight="bold")
+    for bar, s in zip(b, shares):
+        a2.text(bar.get_x() + bar.get_width() / 2, s + 1.6, f"{s}%",
+                ha="center", fontweight="bold", fontsize=10.5)
     a2.set_ylabel("share of exits"); a2.set_ylim(0, max(shares) * 1.16)
     a2.set_title("(b)  Most exits are non-renewals at the 43-day term",
                  fontsize=11, fontweight="bold", loc="left")
@@ -296,7 +294,6 @@ def build_exit_dims():
         a2.text(bar.get_x() + bar.get_width() / 2, er[k] + 1.2, f"{er[k]:.0f}%",
                 ha="center", fontweight="bold", fontsize=9.5)
     a2.set_ylabel("monthly exit probability (%)"); a2.set_ylim(0, extop)
-    a2.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     a2.set_title("(b)  Exit probability by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
@@ -354,7 +351,7 @@ def build_metrics_panel_apartments():
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Views & Velocity", "median new views / day", False, "{:.1f}"),
             ("click", "Clicks & Saves", "% of listings w/ a click", False, "{:.0f}%"),
-            ("exit", "Exit Probability", "monthly, % of active stock", False, "{:.0f}%"),
+            ("exit", "Exit Probability", "% exiting within 30 days", False, "{:.0f}%"),
             ("age", "Time on Market", "median days on market", True, "{:.0f}")]
     cmaps = {"vpd": LinearSegmentedColormap.from_list("t", ["#e8f0f1", TEAL]),
              "click": LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD]),
@@ -368,14 +365,8 @@ def build_metrics_panel_apartments():
         return 1 - n if invert else n
 
     nrows = len(D) + 1
-    fig, ax = plt.subplots(figsize=(9.6, 7.8)); ax.axis("off")
-    ax.set_xlim(0, 4); ax.set_ylim(-1.4, nrows + 1.9)
-    ax.text(2, nrows + 1.5, "Four demand signals across Tashkent districts \u2014 apartments only",
-            ha="center", fontsize=13, fontweight="bold", color=INK)
-    ax.text(2, nrows + 1.08,
-            "Ordered by demand velocity. Each column shaded independently; "
-            "darker = stronger demand (Time on Market shaded inversely).",
-            ha="center", fontsize=7.6, color=GREY, style="italic")
+    fig, ax = plt.subplots(figsize=(9.6, 7.2)); ax.axis("off")
+    ax.set_xlim(0, 4); ax.set_ylim(-0.7, nrows + 0.7)
     for j, (key, title, sub, inv, fmt) in enumerate(cols):
         n = shade(D[key], inv)
         ax.text(j + 0.5, nrows + 0.2, title, ha="center", va="bottom", fontweight="bold",
