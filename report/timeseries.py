@@ -157,6 +157,33 @@ def heatmap(dist_df, metric, title, fmt, hi, fname):
     plt.close()
 
 
+def multihorizon(dist_df, metric, ylabel, title, fmt, fname):
+    """Grouped bars: each district, one bar per month (3-horizon comparison)."""
+    d = dist_df[dist_df[metric].notna()].copy()
+    d["mon"] = pd.to_datetime(d.anchor_date).dt.strftime("%b")
+    months = list(pd.to_datetime(d.anchor_date).sort_values().dt.strftime("%b").unique())
+    piv = d.pivot(index="scope", columns="mon", values=metric)[months]
+    piv = piv.sort_values(months[-1], ascending=False)
+    dists = list(piv.index); x = np.arange(len(dists)); w = 0.8 / len(months)
+    palette = [GOLD, TEAL, RUST, PURP][:len(months)]
+    fig, ax = plt.subplots(figsize=(14, 6))
+    for k, (mon, c) in enumerate(zip(months, palette)):
+        vals = piv[mon].to_numpy(float)
+        off = (k - (len(months) - 1) / 2) * w
+        ax.bar(x + off, vals, w, color=c, label=f"{mon} 2026")
+        for xi, v in zip(x + off, vals):
+            if np.isfinite(v):
+                ax.text(xi, v + piv.values.max() * 0.012, fmt.format(v),
+                        ha="center", fontsize=7, color=INK)
+    ax.set_xticks(x); ax.set_xticklabels(dists, rotation=32, ha="right", fontsize=9.5)
+    ax.set_ylabel(ylabel); ax.set_ylim(0, np.nanmax(piv.values) * 1.16)
+    ax.set_title(title, fontsize=13, fontweight="bold", loc="left")
+    ax.legend(frameon=False, fontsize=10, ncol=len(months), loc="upper right")
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUT, fname), dpi=150, bbox_inches="tight")
+    plt.close()
+
+
 def overall_chart(ov):
     panels = [("new_views", "New views per month (reach)", "{:,.0f}"),
               ("vpd_med", "View velocity (median new views/listing/day)", "{:.2f}"),
@@ -216,6 +243,12 @@ def main():
             "{:.0f}%", GOLD, "heat_clickrate.png")
     heatmap(dist, "save_rate_pct", "Save incidence by district\n(% of listings with a save)",
             "{:.0f}%", PURP, "heat_saverate.png")
+    multihorizon(dist, "vpd_med", "view velocity (median new views / listing / day)",
+                 "View velocity by district — three-month comparison (24th-to-24th)",
+                 "{:.1f}", "multihorizon_velocity.png")
+    multihorizon(dist, "new_views", "new views per month (reach)",
+                 "Monthly reach by district — three-month comparison (24th-to-24th)",
+                 "{:,.0f}", "multihorizon_reach.png")
     print("[timeseries] done ->", OUT)
 
 
