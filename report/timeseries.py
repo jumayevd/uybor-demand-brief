@@ -21,6 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import FuncFormatter
 
 import config
 
@@ -157,28 +158,40 @@ def heatmap(dist_df, metric, title, fmt, hi, fname):
     plt.close()
 
 
-def multihorizon(dist_df, metric, ylabel, title, fmt, fname):
-    """Grouped bars: each district, one bar per month (3-horizon comparison)."""
+def multihorizon(dist_df, metric, ylabel, title, fmt, fname, thousands=False):
+    """Grouped bars: each district, one bar per month-long period (horizons).
+
+    Bars are monthly FLOWS, so each is labelled by its period (e.g. Jun-Jul),
+    not the end-of-month anchor. thousands=True labels values as e.g. "199k".
+    """
+    def lab(v):
+        return f"{v / 1000:.0f}k" if thousands else fmt.format(v)
     d = dist_df[dist_df[metric].notna()].copy()
-    d["mon"] = pd.to_datetime(d.anchor_date).dt.strftime("%b")
-    months = list(pd.to_datetime(d.anchor_date).sort_values().dt.strftime("%b").unique())
-    piv = d.pivot(index="scope", columns="mon", values=metric)[months]
-    piv = piv.sort_values(months[-1], ascending=False)
-    dists = list(piv.index); x = np.arange(len(dists)); w = 0.8 / len(months)
-    palette = [GOLD, TEAL, RUST, PURP][:len(months)]
+    d["anchor_date"] = pd.to_datetime(d.anchor_date)
+    d["period"] = (pd.to_datetime(d.period_start).dt.strftime("%b") + "–"
+                   + d.anchor_date.dt.strftime("%b"))
+    order = (d[["period", "anchor_date"]].drop_duplicates()
+             .sort_values("anchor_date").period.tolist())
+    piv = d.pivot(index="scope", columns="period", values=metric)[order]
+    piv = piv.sort_values(order[-1], ascending=False)
+    dists = list(piv.index); x = np.arange(len(dists)); w = 0.8 / len(order)
+    palette = [GOLD, TEAL, RUST, PURP][:len(order)]
     fig, ax = plt.subplots(figsize=(14, 6))
-    for k, (mon, c) in enumerate(zip(months, palette)):
-        vals = piv[mon].to_numpy(float)
-        off = (k - (len(months) - 1) / 2) * w
-        ax.bar(x + off, vals, w, color=c, label=f"{mon} 2026")
+    for k, (per, c) in enumerate(zip(order, palette)):
+        vals = piv[per].to_numpy(float)
+        off = (k - (len(order) - 1) / 2) * w
+        ax.bar(x + off, vals, w, color=c, label=per)
         for xi, v in zip(x + off, vals):
             if np.isfinite(v):
-                ax.text(xi, v + piv.values.max() * 0.012, fmt.format(v),
+                ax.text(xi, v + np.nanmax(piv.values) * 0.012, lab(v),
                         ha="center", fontsize=7, color=INK)
     ax.set_xticks(x); ax.set_xticklabels(dists, rotation=32, ha="right", fontsize=9.5)
     ax.set_ylabel(ylabel); ax.set_ylim(0, np.nanmax(piv.values) * 1.16)
+    if thousands:
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v / 1000:.0f}k"))
     ax.set_title(title, fontsize=13, fontweight="bold", loc="left")
-    ax.legend(frameon=False, fontsize=10, ncol=len(months), loc="upper right")
+    ax.legend(frameon=False, fontsize=10, ncol=len(order), loc="upper right",
+              title="period (24th-to-24th)", title_fontsize=9)
     plt.tight_layout()
     plt.savefig(os.path.join(OUT, fname), dpi=150, bbox_inches="tight")
     plt.close()
@@ -243,12 +256,25 @@ def main():
             "{:.0f}%", GOLD, "heat_clickrate.png")
     heatmap(dist, "save_rate_pct", "Save incidence by district\n(% of listings with a save)",
             "{:.0f}%", PURP, "heat_saverate.png")
-    multihorizon(dist, "vpd_med", "view velocity (median new views / listing / day)",
-                 "View velocity by district — three-month comparison (24th-to-24th)",
-                 "{:.1f}", "multihorizon_velocity.png")
-    multihorizon(dist, "new_views", "new views per month (reach)",
-                 "Monthly reach by district — three-month comparison (24th-to-24th)",
-                 "{:,.0f}", "multihorizon_reach.png")
+    # multi-horizon (3-period) comparison for each main monthly signal
+    for metric, ylabel, title, fmt, fname, *opt in [
+        ("vpd_med", "median new views / listing / day",
+         "View velocity by district — three-month comparison", "{:.1f}",
+         "multihorizon_velocity.png"),
+        ("new_views", "new views in the period",
+         "Reach (new views) by district — three-month comparison", "{:,.0f}",
+         "multihorizon_reach.png", True),
+        ("click_rate_pct", "% of listings with at least one click",
+         "Click incidence by district — three-month comparison", "{:.0f}",
+         "multihorizon_clicks.png"),
+        ("save_rate_pct", "% of listings with at least one save",
+         "Save incidence by district — three-month comparison", "{:.0f}",
+         "multihorizon_saves.png"),
+        ("ctr_pct", "clicks per 100 new views",
+         "Click-through rate by district — three-month comparison", "{:.2f}",
+         "multihorizon_ctr.png"),
+    ]:
+        multihorizon(dist, metric, ylabel, title, fmt, fname, thousands=bool(opt and opt[0]))
     print("[timeseries] done ->", OUT)
 
 
