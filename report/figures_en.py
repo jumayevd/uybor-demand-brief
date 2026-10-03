@@ -15,9 +15,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.patches import Ellipse
-import matplotlib.gridspec as gridspec
+from matplotlib.colors import LinearSegmentedColormap, LogNorm, Normalize
+import matplotlib.patheffects as pe
 import config
 
 mpl.rcParams["font.family"] = "DejaVu Sans"
@@ -395,98 +394,103 @@ def build_metrics_panel_apartments():
     print("  fig_metrics_panel_apartments.pdf")
 
 
-def build_demand_map():
-    d = R["districts"]; cc = R["centroids"]
-    asp = np.cos(np.radians(41.3))
-    BG = "#faf7f1"; PANEL = "#faf7f1"
-    BUBBLE = "#c17b38"
-
-    names = list(cc)
-    pos = np.array([[cc[k]["lon"], cc[k]["lat"]] for k in names], float)
-    orig = pos.copy()
-    reach = np.array([d[k]["reach"] for k in names], float)
-    maxr = reach.max()
-    rad = {names[i]: 0.004 + 0.0125 * (reach[i] / maxr) ** 0.5 for i in range(len(names))}
-    radarr = np.array([rad[k] for k in names])
-    for _ in range(400):
-        moved = 0
+def _label_positions(df, asp):
+    """District label anchors at the median listing location, nudged apart so
+    labels never overlap (label boxes estimated from text length)."""
+    names, pos = [], []
+    for name, g in df.groupby("district"):
+        names.append(name); pos.append([g.longitude.median() * asp, g.latitude.median()])
+    pos = np.array(pos); orig = pos.copy()
+    hw = np.array([0.0019 * len(n) for n in names])   # half-width, aspect-corrected degrees
+    hh = 0.0045                                       # half-height
+    for _ in range(300):
+        moved = False
         for i in range(len(names)):
             for j in range(i + 1, len(names)):
-                dx = (pos[j, 0] - pos[i, 0]) * asp; dy = pos[j, 1] - pos[i, 1]
-                dist = np.hypot(dx, dy); mind = (radarr[i] + radarr[j]) * 1.08
-                if 1e-9 < dist < mind:
-                    push = (mind - dist) / 2; ux, uy = dx / dist, dy / dist
-                    pos[i, 0] -= ux * push / asp; pos[i, 1] -= uy * push
-                    pos[j, 0] += ux * push / asp; pos[j, 1] += uy * push
-                    moved += 1
-        pos += (orig - pos) * 0.04
-        if moved == 0:
+                dx = pos[j, 0] - pos[i, 0]; dy = pos[j, 1] - pos[i, 1]
+                ox = hw[i] + hw[j] - abs(dx); oy = 2 * hh - abs(dy)
+                if ox > 0 and oy > 0:
+                    moved = True
+                    if oy < ox:   # cheaper to separate vertically
+                        s = (oy / 2 + 1e-4) * (1 if dy >= 0 else -1)
+                        pos[i, 1] -= s; pos[j, 1] += s
+                    else:
+                        s = (ox / 2 + 1e-4) * (1 if dx >= 0 else -1)
+                        pos[i, 0] -= s; pos[j, 0] += s
+        if not moved:
             break
-    posd = {names[i]: tuple(pos[i]) for i in range(len(names))}
+        pos += (orig - pos) * 0.02
+    return {n: (p[0] / asp, p[1]) for n, p in zip(names, pos)}
 
-    fig = plt.figure(figsize=(13.5, 8.4))
-    gs = gridspec.GridSpec(1, 2, width_ratios=[2.4, 1], wspace=0.03)
-    axm = fig.add_subplot(gs[0]); axr = fig.add_subplot(gs[1])
 
-    axm.set_facecolor(BG)
-    for s in axm.spines.values():
-        s.set_color("#eae4d8"); s.set_linewidth(1)
-    axm.set_xticks([]); axm.set_yticks([])
-    xs = [posd[k][0] for k in cc]; ys = [posd[k][1] for k in cc]
-    padx = (max(xs) - min(xs)) * 0.16; pady = (max(ys) - min(ys)) * 0.18
-    axm.set_xlim(min(xs) - padx, max(xs) + padx)
-    axm.set_ylim(min(ys) - pady, max(ys) + pady * 1.5)
-    axm.set_aspect(1 / asp)
+def build_demand_map():
+    """Fig 4 — geographic distribution of demand on the real map of Tashkent.
 
-    pcloud = P.drop_duplicates("listing_id")[["longitude", "latitude"]].dropna()
-    pcloud = pcloud[(pcloud.latitude.between(*axm.get_ylim())) &
-                    (pcloud.longitude.between(*axm.get_xlim()))]
-    axm.scatter(pcloud.longitude, pcloud.latitude, s=2.5, color="#cbb68f",
-                alpha=0.30, zorder=1, linewidths=0)
+    Hexagonal bins over every listing's own coordinates. (a) Reach: total new
+    views in each hexagon (log scale). (b) Intensity: new views per active
+    listing-day (the market-tightness ratio), so areas are not rewarded just for
+    having more listings. A hexagon is drawn only if it holds >= MIN_LISTINGS.
+    """
+    G, MIN_LISTINGS = 22, 6
+    df = L.join(P.groupby("listing_id")[["latitude", "longitude"]].median())
+    df = df[df.latitude.between(41.15, 41.45) & df.longitude.between(69.10, 69.45)]
+    asp = np.cos(np.radians(df.latitude.median()))
+    x, y = df.longitude.values, df.latitude.values
+    nv = df.nv.values.astype(float)
+    days = df.days_obs.clip(lower=1).values.astype(float)
+    pad = 0.01
+    ext = (x.min() - pad, x.max() + pad, y.min() - pad, y.max() + pad)
+    hex_km = (ext[1] - ext[0]) / G * 111.32 * asp
+    labels = _label_positions(df, asp)
+    reach_cmap = LinearSegmentedColormap.from_list("reach", ["#f6ead8", "#e0a35f", RUST, "#5c1f17"])
+    int_cmap = LinearSegmentedColormap.from_list("int", ["#e9f2f3", "#7fb0b8", TEAL, "#123f47"])
 
-    for k in sorted(cc, key=lambda x: -d[x]["reach"]):
-        rr = rad[k]
-        e = Ellipse(posd[k], width=rr * 2 / asp, height=rr * 2, facecolor=BUBBLE,
-                    edgecolor="white", lw=2, zorder=3, alpha=0.97)
-        axm.add_patch(e)
-    for k in cc:
-        rr = rad[k]
-        below = {"Shayxontohur", "Mirobod", "Yakkasaroy"}
-        if k in below:
-            axm.text(posd[k][0], posd[k][1] - rr - 0.006, k, ha="center", va="top",
-                     fontsize=9.3, fontweight="bold", color=INK, zorder=5)
+    # exposure (active listing-days) per hexagon, for the intensity ratio
+    tmp = plt.figure()
+    hb_days = tmp.add_subplot().hexbin(x, y, C=days, reduce_C_function=np.sum,
+                                       gridsize=G, extent=ext, mincnt=MIN_LISTINGS)
+    days_hex = np.ma.asarray(hb_days.get_array(), dtype=float)
+    plt.close(tmp)
+
+    fig, axs = plt.subplots(1, 2, figsize=(14, 6.6))
+    for k, ax in enumerate(axs):
+        ax.scatter(x, y, s=1.2, color="#c9c3b8", alpha=0.5, lw=0, zorder=1)
+        hb = ax.hexbin(x, y, C=nv, reduce_C_function=np.sum, gridsize=G, extent=ext,
+                       mincnt=MIN_LISTINGS, linewidths=0.6, edgecolors="white", zorder=2)
+        views_hex = np.ma.asarray(hb.get_array(), dtype=float)
+        if k == 0:
+            hb.set_cmap(reach_cmap)
+            hb.set_norm(LogNorm(vmin=max(float(views_hex.min()), 1.0), vmax=float(views_hex.max())))
+            label, title = "total new views (log scale)", "(a)  Reach: where the attention goes"
         else:
-            axm.text(posd[k][0], posd[k][1] + rr + 0.006, k, ha="center", va="bottom",
-                     fontsize=9.3, fontweight="bold", color=INK, zorder=5)
-
-    axm.set_title("Reach (total new views)", fontsize=12, fontweight="bold",
-                  loc="right", color="#7a6a58", pad=8)
-
-    axr.set_facecolor(PANEL)
-    for s in axr.spines.values():
-        s.set_color("#eae4d8"); s.set_linewidth(1)
-    axr.set_xticks([]); axr.set_yticks([]); axr.set_xlim(0, 1); axr.set_ylim(0, 1)
-    axr.text(0.08, 0.955, "Districts by reach", fontsize=11.5,
-             fontweight="bold", color=INK)
-    axr.text(0.08, 0.925, "total new views (reach)", fontsize=8.5, color=GREY)
-    order = sorted(cc, key=lambda x: -d[x]["reach"])
-    rmax = max(d[k]["reach"] for k in cc)
-    y0 = 0.86; dy = 0.067
-    for i, k in enumerate(order):
-        y = y0 - i * dy; rv = d[k]["reach"]
-        axr.add_patch(plt.Rectangle((0.08, y - 0.011), 0.022, 0.022, fc=BUBBLE, ec="none"))
-        axr.text(0.125, y, k, fontsize=9.3, color=INK, va="center")
-        bw = 0.24 * rv / rmax
-        axr.add_patch(plt.Rectangle((0.56, y - 0.006), 0.24, 0.012, fc="#e7ded0", ec="none"))
-        axr.add_patch(plt.Rectangle((0.56, y - 0.006), max(bw, 0.004), 0.012, fc=BUBBLE, ec="none"))
-        axr.text(0.985, y, f"{rv:,}", fontsize=8.3, color=INK, va="center", ha="right",
-                 fontweight="bold")
-
-    fig.patch.set_facecolor("white")
-    fig.text(0.5, 0.03,
-             "Each district plotted at the median coordinates of its listings; "
-             "bubble size = reach (total new views). Faint dots: individual apartments.",
-             ha="center", fontsize=7.2, color=GREY)
+            ratio = views_hex / days_hex
+            r = ratio.compressed()
+            hb.set_array(ratio); hb.set_cmap(int_cmap)
+            hb.set_norm(Normalize(vmin=np.percentile(r, 3), vmax=np.percentile(r, 97)))
+            label = "new views per active listing-day"
+            title = "(b)  Intensity: attention per listing, net of supply"
+        cb = fig.colorbar(hb, ax=ax, fraction=0.035, pad=0.02)
+        cb.set_label(label, fontsize=9); cb.ax.tick_params(labelsize=8); cb.outline.set_visible(False)
+        if k == 0:
+            lo, hi = hb.norm.vmin, hb.norm.vmax
+            ticks = [t for t in (300, 1000, 3000, 10000, 30000, 100000) if lo <= t <= hi]
+            cb.set_ticks(ticks)
+            cb.set_ticklabels([f"{t // 1000}k" if t >= 1000 else str(t) for t in ticks])
+            cb.ax.minorticks_off()
+        for name, (lx, ly) in labels.items():
+            ax.text(lx, ly, name, ha="center", va="center", fontsize=8.3, fontweight="bold",
+                    color=INK, zorder=5,
+                    path_effects=[pe.withStroke(linewidth=2.6, foreground="white")])
+        ax.set_xlim(ext[0], ext[1]); ax.set_ylim(ext[2], ext[3]); ax.set_aspect(1 / asp)
+        ax.set_xticks([]); ax.set_yticks([])
+        for s in ax.spines.values():
+            s.set_visible(False)
+        ax.set_title(title, fontsize=11.5, fontweight="bold", loc="left")
+    fig.text(0.5, 0.02,
+             f"Each hexagon ≈ {hex_km:.1f} km across; shown where it contains at least "
+             f"{MIN_LISTINGS} listings. Grey dots: individual apartments. Labels at each "
+             "district's median listing location.", ha="center", fontsize=8, color=GREY)
+    plt.tight_layout(rect=(0, 0.04, 1, 1))
     plt.savefig(out("fig_demand_map.pdf"), bbox_inches="tight", facecolor="white")
     plt.close()
     print("  fig_demand_map.pdf")
