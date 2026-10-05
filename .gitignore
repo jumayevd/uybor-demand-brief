@@ -17,3 +17,4 @@ report/figures_en_png/
 report/timeseries_out/
 report/png/
 *.zip
+report/data_stats.json
