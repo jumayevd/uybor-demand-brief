@@ -35,7 +35,7 @@ CATEGORY = "Квартира"     # apartments only
 
 # plausibility bounds: (min, max) inclusive
 BOUNDS = dict(
-    price_usd=(3_000, 5_000_000),
+    price_usd=(30_000, 1_000_000),   # <$30k and >$1M behave as outliers
     area_m2=(15, 500),
     rooms=(1, 8),
     ppsm=(200, 6_000),          # price per square meter, $/m^2
@@ -45,9 +45,8 @@ BOUNDS = dict(
 LISTING_TERM_DAYS = (42, 44)
 
 # price bands for the supply-vs-demand figure
-PRICE_BANDS = [0, 30_000, 50_000, 75_000, 100_000, 150_000, 250_000, 1e9]
-PRICE_BAND_LABELS = ["<30k", "30-50k", "50-75k", "75-100k",
-                     "100-150k", "150-250k", "250k+"]
+PRICE_BANDS = [30_000, 50_000, 75_000, 100_000, 150_000, 250_000, 1_000_000]
+PRICE_BAND_LABELS = ["30-50k", "50-75k", "75-100k", "100-150k", "150-250k", "250k+"]
 
 # Russian district name -> Uzbek (Latin) label (12 Tashkent city districts)
 DISTRICT_MAP = {

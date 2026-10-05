@@ -497,7 +497,7 @@ def build_demand_map():
 
 
 def build_supply_demand_bands():
-    bl = ["<30k", "30-50k", "50-75k", "75-100k", "100-150k", "150-250k", "250k+"]
+    bl = [b for b in config.PRICE_BAND_LABELS if b in R["bands"]]
     sup = [R["bands"][b]["supply"] for b in bl]
     dem = [R["bands"][b]["medvpd"] for b in bl]
     n = len(bl)
@@ -514,7 +514,10 @@ def build_supply_demand_bands():
         ax2.text(i + 0.08, dv + 0.25, f"{dv}", fontsize=9, color=RUST, fontweight="bold")
     ax2.set_ylabel("Median new views / day (demand)", color=RUST, fontsize=10)
     ax2.tick_params(axis="y", colors=RUST); ax2.set_ylim(0, max(dem) * 1.18)
-    ax1.set_title("Supply clusters at \\$50\u2013150k; demand intensity peaks below \\$30k",
+    def band(b):   # "50-75k" -> "$50–75k" (escaped $ so mathtext doesn't trigger)
+        return "\\$" + b.replace("-", "–")
+    ax1.set_title(f"Supply peaks at {band(bl[int(np.argmax(sup))])}; "
+                  f"demand intensity peaks at {band(bl[int(np.argmax(dem))])}",
                   fontsize=12, fontweight="bold", loc="left", pad=12)
     plt.tight_layout()
     plt.savefig(out("fig_supply_demand_bands.pdf"), bbox_inches="tight")

@@ -304,7 +304,8 @@ def metrics(apt, L):
     R["map_rad2"] = {names[i]: round(float(brad[i]), 5) for i in range(len(names))}
 
     # ---- PRICE BANDS: supply vs demand ----
-    L["band"] = pd.cut(L.price, config.PRICE_BANDS, labels=config.PRICE_BAND_LABELS)
+    L["band"] = pd.cut(L.price, config.PRICE_BANDS, labels=config.PRICE_BAND_LABELS,
+                       include_lowest=True)
     bb = L.groupby("band", observed=True).agg(supply=("vpd", "size"),
                                               medvpd=("vpd", "median"))
     R["bands"] = {str(k): dict(supply=int(v.supply), medvpd=round(float(v.medvpd), 1))

@@ -8,8 +8,8 @@ data_stats.py — exact sample statistics for the paper's Data section.
 
 Uses pipeline.load_panel() (same v1+v2 merge and de-duplication as every
 figure) and reports, for two filter sets:
-  pipeline : config.BOUNDS (price, area, rooms, price/m2) - what the figures use
-  paper    : price $30k-$1M and 1-8 rooms only (as currently written in the paper)
+  pipeline : config.BOUNDS (price $30k-$1M, area, rooms, price/m2) - what the figures use
+  paper    : price $30k-$1M and 1-8 rooms only (no area / price-per-m2 checks)
 
 Stats: observation days, missing calendar days, listing-days, unique
 apartments, listings whose district label changed, total new views / clicks /
