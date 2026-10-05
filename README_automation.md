@@ -80,6 +80,23 @@ The token is stored in cron-job.org, never in this repo. If you rotate or
 revoke it, update the header there. Scope is minimal (one repo, Actions only),
 so a leak can at most trigger this workflow.
 
+### Telegram figure posts — same token, two more jobs
+
+The daily Telegram posts use the same pattern. Create two more cron-job.org
+jobs, identical to the one above (POST, same three headers, same token, body
+`{"ref":"main"}`, timezone Asia/Tashkent), changing only the URL and time:
+
+| Job | Time (Tashkent) | URL |
+|---|---|---|
+| Uzbek figures | **06:00** | `https://api.github.com/repos/jumayevd/uybor-demand-brief/actions/workflows/report.yml/dispatches` |
+| English paper figures | **07:00** | `https://api.github.com/repos/jumayevd/uybor-demand-brief/actions/workflows/report-en.yml/dispatches` |
+
+`report.yml` / `report-en.yml` keep their GitHub `schedule` only as a fallback.
+Their gate step asks the Actions API whether a *successful* `workflow_dispatch`
+run already happened today (Tashkent date); if so the scheduled run skips, so
+the channel never gets the same post twice. If the exact-time dispatch fails,
+the fallback still posts (late) that day.
+
 **Data timing:** the scraper stamps each day's snapshot at **20:00 UTC** (01:00
 Tashkent). The 07:00 Tashkent refresh runs ~6 h later, so the freshest snapshot
 is always included.

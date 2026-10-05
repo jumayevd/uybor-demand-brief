@@ -1,10 +1,11 @@
 ---
 name: uybor-report-en
 
-# Posts exactly the working-paper figures (English) to the Telegram channel once
-# a day at ~07:00 Asia/Tashkent (02:00 UTC), plus manual dispatch. GitHub's
-# scheduler is best-effort and may lag by a few minutes to ~an hour. The Uzbek
-# set posts separately at 06:00 (report.yml), so the two never collide.
+# Posts exactly the working-paper figures (English) to the Telegram channel.
+# Primary trigger: an external cron (cron-job.org) calls the workflow_dispatch
+# API at exactly 07:00 Asia/Tashkent. GitHub's own schedule is kept only as a
+# FALLBACK: the gate step skips it when a successful dispatch run already
+# posted today (no duplicates). The Uzbek set posts at 06:00 (report.yml).
 on:  # yamllint disable-line rule:truthy
   schedule:
     - cron: "0 2 * * *"   # 07:00 Asia/Tashkent
@@ -12,6 +13,7 @@ on:  # yamllint disable-line rule:truthy
 
 permissions:
   contents: read
+  actions: read      # gate step lists today's runs
 
 concurrency:
   group: uybor-report-en
@@ -25,18 +27,39 @@ jobs:
       run:
         working-directory: report
     steps:
+      - name: Gate (fallback schedule skips if today's post already went out)
+        id: gate
+        if: github.event_name == 'schedule'
+        working-directory: .   # runs before checkout; report/ doesn't exist yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          since="$(TZ=Asia/Tashkent date +%F)T00:00:00+05:00"
+          n=$(gh api -X GET "repos/${GITHUB_REPOSITORY}/actions/workflows/report-en.yml/runs" \
+                -f event=workflow_dispatch -f status=success \
+                -f "created=>=${since}" --jq '.total_count')
+          echo "successful dispatch runs since ${since}: ${n}"
+          if [ "${n:-0}" -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Today's post already went out via the exact-time trigger; skipping."
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.skip != 'true'
 
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.skip != 'true'
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: report/requirements.txt
 
       - name: Install dependencies
+        if: steps.gate.outputs.skip != 'true'
         run: pip install -r requirements.txt
 
       - name: Pull v2, build English paper figures, send to Telegram
+        if: steps.gate.outputs.skip != 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}
@@ -46,7 +69,7 @@ jobs:
         run: python daily_report_en.py
 
       - name: Upload English figures
-        if: always()
+        if: always() && steps.gate.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: english-figures
