@@ -18,3 +18,4 @@ report/timeseries_out/
 report/png/
 *.zip
 report/data_stats.json
+report/paper_figures/

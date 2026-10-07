@@ -158,8 +158,9 @@ def heatmap(dist_df, metric, title, fmt, hi, fname):
     plt.close()
 
 
-def multihorizon(dist_df, metric, ylabel, title, fmt, fname, thousands=False):
-    """Grouped bars: each district, one bar per month-long period (horizons).
+def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
+                      title_size=13):
+    """Grouped bars on ax: each district, one bar per month-long period.
 
     Bars are monthly FLOWS, so each is labelled by its period (e.g. Jun-Jul),
     not the end-of-month anchor. thousands=True labels values as e.g. "199k".
@@ -176,7 +177,6 @@ def multihorizon(dist_df, metric, ylabel, title, fmt, fname, thousands=False):
     piv = piv.sort_values(order[-1], ascending=False)
     dists = list(piv.index); x = np.arange(len(dists)); w = 0.8 / len(order)
     palette = [GOLD, TEAL, RUST, PURP][:len(order)]
-    fig, ax = plt.subplots(figsize=(14, 6))
     for k, (per, c) in enumerate(zip(order, palette)):
         vals = piv[per].to_numpy(float)
         off = (k - (len(order) - 1) / 2) * w
@@ -189,9 +189,15 @@ def multihorizon(dist_df, metric, ylabel, title, fmt, fname, thousands=False):
     ax.set_ylabel(ylabel); ax.set_ylim(0, np.nanmax(piv.values) * 1.16)
     if thousands:
         ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v / 1000:.0f}k"))
-    ax.set_title(title, fontsize=13, fontweight="bold", loc="left")
+    ax.set_title(title, fontsize=title_size, fontweight="bold", loc="left")
     ax.legend(frameon=False, fontsize=10, ncol=len(order), loc="upper right",
               title="period (24th-to-24th)", title_fontsize=9)
+
+
+def multihorizon(dist_df, metric, ylabel, title, fmt, fname, thousands=False):
+    """Standalone multi-horizon chart for one signal, saved to timeseries_out/."""
+    fig, ax = plt.subplots(figsize=(14, 6))
+    draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands)
     plt.tight_layout()
     plt.savefig(os.path.join(OUT, fname), dpi=150, bbox_inches="tight")
     plt.close()

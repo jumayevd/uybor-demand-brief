@@ -41,7 +41,17 @@ def load_panel():
     df = pd.concat(frames, ignore_index=True)
     # one row per (listing, day); keep first if a listing appears twice in a day
     df = df.drop_duplicates(subset=["listing_id", "snapshot_date"], keep="first")
-    return df
+    return cut_to_end(df)
+
+
+def cut_to_end(df):
+    """Optional cut-off: PANEL_END=YYYY-MM-DD keeps snapshots up to that date
+    (used to freeze the paper's figures at a fixed window). Unset = all data."""
+    end = os.environ.get("PANEL_END")
+    if not end:
+        return df
+    d = pd.to_datetime(df.snapshot_date)
+    return df[d <= pd.Timestamp(end)].copy()
 
 
 # ---------------------------------------------------------------------------

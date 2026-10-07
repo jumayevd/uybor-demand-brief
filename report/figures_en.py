@@ -18,6 +18,7 @@ import matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
 import config
 import demand_map
+from pipeline import cut_to_end as pipeline_cut
 
 mpl.rcParams["font.family"] = "DejaVu Sans"
 mpl.rcParams["pdf.fonttype"] = 42
@@ -506,7 +507,7 @@ def _hedonic():
         if sd is not None:
             df["snapshot_date"] = sd
         frames.append(df)
-    df = pd.concat(frames, ignore_index=True)
+    df = pipeline_cut(pd.concat(frames, ignore_index=True))
     for col in need:
         if col not in df.columns:
             df[col] = np.nan
@@ -629,6 +630,25 @@ def build_hedonic_results():
     print("  fig_hedonic_results.pdf")
 
 
+def build_dynamics_districts():
+    """Fig 10 (paper) — demand dynamics across three monthly windows
+    (24th-to-24th): (a) demand reach and (b) click-through rate, by district."""
+    import timeseries as TS
+    anchors = TS.resolve_anchors(P)
+    dist = pd.concat([TS.series(P[P.district_en == d], anchors, d)
+                      for d in sorted(P.district_en.unique())], ignore_index=True)
+    fig, (a1, a2) = plt.subplots(2, 1, figsize=(14, 11))
+    TS.draw_multihorizon(a1, dist, "new_views", "new views in the period",
+                         "(a)  Demand reach by district", "{:,.0f}",
+                         thousands=True, title_size=12)
+    TS.draw_multihorizon(a2, dist, "ctr_pct", "clicks per 100 new views",
+                         "(b)  Click-through rate by district", "{:.2f}", title_size=12)
+    plt.tight_layout()
+    plt.savefig(out("fig_dynamics_districts.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_dynamics_districts.pdf")
+
+
 ALL_FIGURES = [
     build_concentration_apartments,
     build_s1_dimensions,
@@ -643,6 +663,7 @@ ALL_FIGURES = [
     build_supply_demand_bands,
     build_tightness_districts,
     build_hedonic_results,
+    build_dynamics_districts,
 ]
 
 
