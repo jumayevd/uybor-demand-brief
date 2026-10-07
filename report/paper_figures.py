@@ -74,5 +74,32 @@ def main():
     print(f"[paper_figures] {len(PAPER)} paper figures + {len(EXTRA)} extra -> {OUT}")
 
 
+def post():
+    """Post the built paper figures (1-12, paper captions) to the Telegram channel
+    as a one-off, under a header that marks them as frozen paper figures."""
+    import send_telegram as ST
+    token = os.environ.get(ST.TOKEN_ENV)
+    if not token:
+        print(f"SEND FAILED: ${ST.TOKEN_ENV} is not set")
+        return 1
+    chat = os.environ.get("TELEGRAM_CHAT_EN") or os.environ.get(ST.CHAT_ENV, ST.DEFAULT_CHAT)
+    w = json.load(open(os.path.join(OUT, "metrics.json"), encoding="utf-8"))["window"]
+    end = w["date_max"]
+    header = ("📄 *Working-paper figures — data to "
+              f"{pd_date(end)}*\n{w['date_min']} → {end}  ·  {w['n_days']} days  "
+              f"·  {w['n_listings']:,} apartments  ·  {w['n_obs']:,} listing-days")
+    figs = [(f"Figure{n:02d}_{name[4:]}", f"Figure {n}. {cap}") for n, name, cap in PAPER]
+    return ST.deliver(token, chat, OUT, figs, header, os.path.join(OUT, "_png"))
+
+
+def pd_date(iso):
+    """2026-09-24 -> 24 Sep 2026"""
+    import datetime as _dt
+    return _dt.date.fromisoformat(iso).strftime("%d %b %Y").lstrip("0")
+
+
 if __name__ == "__main__":
+    import sys
+    if "--post" in sys.argv:
+        sys.exit(post())
     main()
