@@ -87,6 +87,7 @@ def level(df, t):
 
 def flow(df, t0, t1):
     p = df[(df.snapshot_date >= t0) & (df.snapshot_date <= t1)]
+    p = p.sort_values(["listing_id", "snapshot_date"])   # first/last below need date order
     g = p.groupby("listing_id").agg(
         v0=("views", "first"), v1=("views", "last"),
         c0=("clicks", "first"), c1=("clicks", "last"),
