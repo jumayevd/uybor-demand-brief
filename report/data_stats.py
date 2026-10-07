@@ -45,6 +45,19 @@ def apply_filters(df, price, rooms=(1, 8), area=None, ppsm=None):
     return a[a.district.isin(config.DISTRICT_MAP)]
 
 
+def daily_profile(s):
+    """Per snapshot date: listings observed, and new views from consecutive-day pairs."""
+    s = s.copy()
+    g = s.groupby("listing_id")
+    s["dv"] = g.views.diff().clip(lower=0)
+    s["gap"] = g.snapshot_date.diff().dt.days
+    out = {}
+    for d, x in s.groupby("snapshot_date"):
+        pair = x[x.gap == 1]
+        out[str(d.date())] = [int(len(x)), int(pair.dv.sum()), int(len(pair))]
+    return out   # date -> [listings, new views (1-day pairs), pairs]
+
+
 def stats(a):
     s = a.sort_values(["listing_id", "snapshot_date"])
     g = s.groupby("listing_id")
@@ -61,6 +74,7 @@ def stats(a):
         new_views=int(flows.views.sum()), new_clicks=int(flows.clicks.sum()),
         new_saves=int(flows.favorites.sum()),
         consecutive_pairs=int(diffs.views.notna().sum()),
+        daily=daily_profile(s),
         counter_decreases={c: int((diffs[c] < 0).sum()) for c in COUNTERS},
     )
 
