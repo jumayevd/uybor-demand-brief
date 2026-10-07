@@ -39,7 +39,8 @@ PAPER = [
     (11, "fig_supply_demand_bands", "Distribution of demand and supply across price segments"),
     (12, "fig_tightness_districts", "Market tightness across districts"),
 ]
-EXTRA = [("fig_demand_map", "District demand map: (a) reach, (b) intensity (on Telegram; not in this draft)")]
+EXTRA = [("fig_demand_map", "District demand map: (a) reach — share of all new views, "
+                            "(b) intensity — new views per active listing-day")]
 
 
 def export(src_pdf, stem):
@@ -66,7 +67,7 @@ def main():
         lines.append(f"Figure {n}. {cap}")
     for name, cap in EXTRA:
         export(os.path.join(figures_en.FIG_DIR, name + ".pdf"), f"Extra_{name[4:]}")
-        lines.append(f"Extra. {cap}")
+        lines.append(f"Extra. {cap} (on Telegram; not in this draft)")
     with open(os.path.join(OUT, "captions.txt"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     shutil.copy(os.path.join(config.BUILD_DIR, "metrics.json"), os.path.join(OUT, "metrics.json"))
@@ -74,9 +75,10 @@ def main():
     print(f"[paper_figures] {len(PAPER)} paper figures + {len(EXTRA)} extra -> {OUT}")
 
 
-def post():
-    """Post the built paper figures (1-12, paper captions) to the Telegram channel
-    as a one-off, under a header that marks them as frozen paper figures."""
+def post(which="paper"):
+    """Post the built figures to the Telegram channel as a one-off, under a header
+    that marks them as frozen paper figures. which: paper (1-12, paper captions),
+    extra (figures outside this draft, e.g. the demand map), or all."""
     import send_telegram as ST
     token = os.environ.get(ST.TOKEN_ENV)
     if not token:
@@ -88,7 +90,11 @@ def post():
     header = ("📄 *Working-paper figures — data to "
               f"{pd_date(end)}*\n{w['date_min']} → {end}  ·  {w['n_days']} days  "
               f"·  {w['n_listings']:,} apartments  ·  {w['n_obs']:,} listing-days")
-    figs = [(f"Figure{n:02d}_{name[4:]}", f"Figure {n}. {cap}") for n, name, cap in PAPER]
+    figs = []
+    if which in ("paper", "all"):
+        figs += [(f"Figure{n:02d}_{name[4:]}", f"Figure {n}. {cap}") for n, name, cap in PAPER]
+    if which in ("extra", "all"):
+        figs += [(f"Extra_{name[4:]}", cap) for name, cap in EXTRA]
     return ST.deliver(token, chat, OUT, figs, header, os.path.join(OUT, "_png"))
 
 
@@ -100,6 +106,7 @@ def pd_date(iso):
 
 if __name__ == "__main__":
     import sys
-    if "--post" in sys.argv:
-        sys.exit(post())
+    if "--post" in sys.argv:        # --post [paper|extra|all]
+        i = sys.argv.index("--post")
+        sys.exit(post(sys.argv[i + 1] if len(sys.argv) > i + 1 else "paper"))
     main()

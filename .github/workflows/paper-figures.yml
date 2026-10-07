@@ -13,10 +13,11 @@ on:  # yamllint disable-line rule:truthy
         required: false
         default: "2026-09-24"
       post:
-        description: "Also post figures 1-12 to the Telegram channel (one-off)"
-        type: boolean
+        description: "Post to the Telegram channel (one-off): none, paper (figures 1-12), extra (demand map), all"
+        type: choice
+        options: [none, paper, extra, all]
         required: false
-        default: false
+        default: none
 
 permissions:
   contents: read
@@ -50,12 +51,13 @@ jobs:
           python paper_figures.py
 
       - name: Post paper figures to Telegram (only if requested)
-        if: inputs.post
+        if: inputs.post && inputs.post != 'none'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT: ${{ vars.TELEGRAM_CHAT || '@chart_automation' }}
           TELEGRAM_CHAT_EN: ${{ vars.TELEGRAM_CHAT_EN || '' }}
-        run: python paper_figures.py --post
+          POST_WHICH: ${{ inputs.post }}
+        run: python paper_figures.py --post "$POST_WHICH"
 
       - name: Upload paper figures
         uses: actions/upload-artifact@v4
