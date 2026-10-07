@@ -41,7 +41,7 @@ FIGURES = [
     ("fig_concentration_apartments", "Talab tezligi taqsimoti va yuqori 10% ulushi"),
     ("fig_s1_dimensions", "Tezlik: xonalar soni / bino turi / hafta kuni"),
     ("fig_wedge_apartments", "Narx kvintili bo'yicha tezlik va niyat"),
-    ("fig_demand_map", "Talab xaritasi: doira o'lchami = qamrov (reach)"),
+    ("fig_demand_map", "Talab xaritasi: (a) qamrov ulushi, (b) e'lon boshiga intensivlik"),
     ("fig_intent_norm_districts", "Tumanlar bo'yicha normalangan niyat"),
     ("fig_s2_dimensions", "Niyat: xonalar soni / hafta kuni"),
     ("fig_exit_apartments", "Chiqish tezlik farqi va 43-kunlik dekompozitsiya"),

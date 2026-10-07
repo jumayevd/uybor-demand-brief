@@ -14,8 +14,8 @@ Ingliz texnik atamalar figuralarda saqlanadi (masalan VPD, reach).
 import pandas as pd, numpy as np, json, os
 import matplotlib.pyplot as plt, matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.patches import Ellipse
 import config
+import demand_map
 
 mpl.rcParams["font.family"] = "DejaVu Sans"
 mpl.rcParams["pdf.fonttype"] = 42
@@ -397,105 +397,14 @@ def build_metrics_panel_apartments():
 
 
 def build_demand_map():
-    """Talab xaritasi: original layout (o'ng panel bilan), o'lcham = qamrov (reach), bir xil rang."""
-    global R, L, P
-    import matplotlib.gridspec as gridspec
-    d = R["districts"]; cc = R["centroids"]
-    asp = np.cos(np.radians(41.3))
-    BG = "#faf7f1"; PANEL = "#faf7f1"
-    BUBBLE = "#c17b38"   # bir xil rang (barcha aylanalar uchun)
-
-    # reach bo'yicha o'lcham; overlaplarni oldini olish uchun engil ajratish
-    names = list(cc)
-    pos = np.array([[cc[k]["lon"], cc[k]["lat"]] for k in names], float)
-    orig = pos.copy()
-    reach = np.array([d[k]["reach"] for k in names], float)
-    maxr = reach.max()
-    rad = {names[i]: 0.004 + 0.0125 * (reach[i] / maxr) ** 0.5 for i in range(len(names))}
-    radarr = np.array([rad[k] for k in names])
-    for _ in range(400):
-        moved = 0
-        for i in range(len(names)):
-            for j in range(i + 1, len(names)):
-                dx = (pos[j, 0] - pos[i, 0]) * asp; dy = pos[j, 1] - pos[i, 1]
-                dist = np.hypot(dx, dy); mind = (radarr[i] + radarr[j]) * 1.08
-                if 1e-9 < dist < mind:
-                    push = (mind - dist) / 2; ux, uy = dx / dist, dy / dist
-                    pos[i, 0] -= ux * push / asp; pos[i, 1] -= uy * push
-                    pos[j, 0] += ux * push / asp; pos[j, 1] += uy * push
-                    moved += 1
-        pos += (orig - pos) * 0.04
-        if moved == 0:
-            break
-    posd = {names[i]: tuple(pos[i]) for i in range(len(names))}
-
-    fig = plt.figure(figsize=(13.5, 8.4))
-    gs = gridspec.GridSpec(1, 2, width_ratios=[2.4, 1], wspace=0.03)
-    axm = fig.add_subplot(gs[0]); axr = fig.add_subplot(gs[1])
-
-    # ---- MAP ----
-    axm.set_facecolor(BG)
-    for s in axm.spines.values():
-        s.set_color("#eae4d8"); s.set_linewidth(1)
-    axm.set_xticks([]); axm.set_yticks([])
-    xs = [posd[k][0] for k in cc]; ys = [posd[k][1] for k in cc]
-    padx = (max(xs) - min(xs)) * 0.16; pady = (max(ys) - min(ys)) * 0.18
-    axm.set_xlim(min(xs) - padx, max(xs) + padx)
-    axm.set_ylim(min(ys) - pady, max(ys) + pady * 1.5)
-    axm.set_aspect(1 / asp)
-
-    pcloud = P.drop_duplicates("listing_id")[["longitude", "latitude"]].dropna()
-    pcloud = pcloud[(pcloud.latitude.between(*axm.get_ylim())) &
-                    (pcloud.longitude.between(*axm.get_xlim()))]
-    axm.scatter(pcloud.longitude, pcloud.latitude, s=2.5, color="#cbb68f",
-                alpha=0.30, zorder=1, linewidths=0)
-
-    # bubbles: bir xil rang, o'lcham = reach, katta->kichik chizish
-    for k in sorted(cc, key=lambda x: -d[x]["reach"]):
-        rr = rad[k]
-        e = Ellipse(posd[k], width=rr * 2 / asp, height=rr * 2, facecolor=BUBBLE,
-                    edgecolor="white", lw=2, zorder=3, alpha=0.97)
-        axm.add_patch(e)
-    for k in cc:
-        rr = rad[k]
-        below = {"Shayxontohur", "Mirobod", "Yakkasaroy"}
-        if k in below:
-            axm.text(posd[k][0], posd[k][1] - rr - 0.006, k, ha="center", va="top",
-                     fontsize=9.3, fontweight="bold", color=INK, zorder=5)
-        else:
-            axm.text(posd[k][0], posd[k][1] + rr + 0.006, k, ha="center", va="bottom",
-                     fontsize=9.3, fontweight="bold", color=INK, zorder=5)
-
-    # ---- RANKED PANEL (o'ng tomonda, saqlanadi) — reach bo'yicha ----
-    axr.set_facecolor(PANEL)
-    for s in axr.spines.values():
-        s.set_color("#eae4d8"); s.set_linewidth(1)
-    axr.set_xticks([]); axr.set_yticks([]); axr.set_xlim(0, 1); axr.set_ylim(0, 1)
-    axr.text(0.08, 0.955, "Tumanlar qamrov bo'yicha", fontsize=11.5,
-             fontweight="bold", color=INK)
-    axr.text(0.08, 0.925, "jami yangi ko'rishlar (reach)", fontsize=8.5, color=GREY)
-    order = sorted(cc, key=lambda x: -d[x]["reach"])
-    rmax = max(d[k]["reach"] for k in cc)
-    y0 = 0.86; dy = 0.067
-    for i, k in enumerate(order):
-        y = y0 - i * dy; rv = d[k]["reach"]
-        axr.add_patch(plt.Rectangle((0.08, y - 0.011), 0.022, 0.022, fc=BUBBLE, ec="none"))
-        axr.text(0.125, y, k, fontsize=9.3, color=INK, va="center")
-        bw = 0.24 * rv / rmax
-        axr.add_patch(plt.Rectangle((0.56, y - 0.006), 0.24, 0.012, fc="#e7ded0", ec="none"))
-        axr.add_patch(plt.Rectangle((0.56, y - 0.006), max(bw, 0.004), 0.012, fc=BUBBLE, ec="none"))
-        axr.text(0.985, y, f"{rv:,}", fontsize=8.3, color=INK, va="center", ha="right",
-                 fontweight="bold")
-
-    fig.patch.set_facecolor("white")
-    fig.text(0.5, 0.03,
-             "Har tuman o'z e'lonlarining mediana koordinatalarida; aylana o'lchami = qamrov (reach). "
-             "So'nik nuqtalar: alohida kvartiralar.",
-             ha="center", fontsize=7.2, color=GREY)
-    plt.savefig(out("fig_demand_map.pdf"), bbox_inches="tight", facecolor="white")
-    plt.close()
+    """Talab xaritasi: tumanlar bo'yicha (a) qamrov ulushi, (b) intensivlik (demand_map.py)."""
+    demand_map.draw(L, P, out("fig_demand_map.pdf"), dict(
+        cbar_a="barcha yangi ko'rishlardagi ulush (%, kvadrat ildiz shkalasi)",
+        cbar_b="faol e'lon-kuniga yangi ko'rishlar",
+        footnote=("Tuman hududlari e'lonlar joylashuvidan taxminan aniqlangan (har bir nuqta "
+                  "eng yaqin e'lonlar tumaniga biriktirilgan). Rang shkalasidagi o'q: undan "
+                  "yuqori qiymatlar eng to'q rangda.  * 40 tadan kam e'lon.")))
     print("  fig_demand_map.pdf")
-
 
 
 def build_supply_demand_bands():
