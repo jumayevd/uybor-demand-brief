@@ -65,8 +65,8 @@ def _rasterize(pdf_path, png_path):
 
 
 def _api(token, method, data, file_field=None, file_path=None, mime=None):
-    """POST to the Bot API, re-opening any file each attempt and honouring
-    Telegram's 429 `retry_after` back-off."""
+    """POST to the Bot API, re-opening any file each attempt. Retries on
+    Telegram's 429 `retry_after` back-off and on dropped connections/timeouts."""
     url = API.format(token=token, method=method)
     for attempt in range(MAX_TRIES):
         fh = files = None
@@ -76,6 +76,11 @@ def _api(token, method, data, file_field=None, file_path=None, mime=None):
             files = {file_field: (name, fh, mime) if mime else fh}
         try:
             r = requests.post(url, data=data, files=files, timeout=120)
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            wait = 5 * (attempt + 1)
+            print(f"[telegram] {method}: {type(exc).__name__}, retrying in {wait}s", flush=True)
+            time.sleep(wait)
+            continue
         finally:
             if fh:
                 fh.close()
@@ -88,7 +93,7 @@ def _api(token, method, data, file_field=None, file_path=None, mime=None):
             continue
         raise RuntimeError(f"Telegram {method} failed: "
                            f"{body.get('error_code')} {body.get('description')}")
-    raise RuntimeError(f"Telegram {method}: still rate-limited after {MAX_TRIES} tries")
+    raise RuntimeError(f"Telegram {method}: gave up after {MAX_TRIES} tries")
 
 
 def _header():
@@ -116,7 +121,8 @@ def deliver(token, chat, fig_dir, figures, header_text, png_dir):
         _api(token, "sendMessage",
              {"chat_id": chat, "text": header_text, "parse_mode": "Markdown"})
         time.sleep(GAP)
-        for name, caption in present:
+        print(f"[telegram] header sent to {chat}", flush=True)
+        for i, (name, caption) in enumerate(present, 1):
             pdf = os.path.join(fig_dir, name + ".pdf")
             png = os.path.join(png_dir, name + ".png")
             _rasterize(pdf, png)
@@ -127,6 +133,7 @@ def deliver(token, chat, fig_dir, figures, header_text, png_dir):
             # ... then the original vector PDF as a downloadable document
             _api(token, "sendDocument", {"chat_id": chat},
                  file_field="document", file_path=pdf, mime="application/pdf")
+            print(f"[telegram] {i}/{len(present)} sent: {name}", flush=True)
             time.sleep(GAP)
     except Exception as exc:
         print(f"SEND FAILED: {exc}", file=sys.stderr)
