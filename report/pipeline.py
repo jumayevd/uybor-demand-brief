@@ -107,6 +107,55 @@ def listing_level(apt):
     return L
 
 
+def exit_journeys(apt, L, final):
+    """Property journeys for the exit measure (paper Eq. 2).
+
+    A relisted flat gets a new listing id, so listings are chained into one
+    journey when they share address, rooms, floor and area (rounded m2) and the
+    later one appears after the earlier one vanished, within 7 days. Returns one
+    row per journey: span (exposure days, >=1), gone (vanished before the final
+    snapshot), term (vanished at the 42-44 day platform term => censored), exit
+    (gone and not term = genuine exit), district/rooms of its first listing, and
+    view velocity (new views / observed days across its listings).
+    """
+    lo, hi = config.LISTING_TERM_DAYS
+    has_addr = "address" in apt.columns
+    a = apt.sort_values("snapshot_date").groupby("listing_id").agg(
+        addr=("address", "last") if has_addr else ("district_en", "last"),
+        rooms=("rooms_n", "last"), floor=("floor", "last") if "floor" in apt.columns
+        else ("rooms_n", "last"), area=("area_m2", "last"),
+        d0=("snapshot_date", "first"), d1=("snapshot_date", "last"),
+        posted=("posted_at", "last"), district=("district_en", "first"))
+    a = a.join(L[["nv", "days_obs"]], how="left").fillna({"nv": 0, "days_obs": 0})
+    if has_addr:
+        a["key"] = (a.addr.fillna("").astype(str).str.lower().str.replace(r"\W", "", regex=True)
+                    + "|" + a.rooms.astype(str) + "|" + a.floor.astype(str)
+                    + "|" + a.area.round(0).astype(str))
+    else:                                   # no addresses: every listing is its own journey
+        a["key"] = a.index.astype(str)
+    a = a.sort_values(["key", "d0"])
+    jid, cur, prev_key, prev_d1 = [], 0, None, None
+    for key, d0, d1 in zip(a.key, a.d0, a.d1):
+        relist = key == prev_key and 0 < (d0 - prev_d1).days <= 7
+        if not relist:
+            cur += 1
+            prev_d1 = d1
+        else:
+            prev_d1 = max(prev_d1, d1)
+        jid.append(cur); prev_key = key
+    a["journey"] = jid
+    J = a.groupby("journey").agg(d0=("d0", "min"), d1=("d1", "max"), n_list=("d0", "size"),
+                                 district=("district", "first"), rooms=("rooms", "first"),
+                                 nv=("nv", "sum"), dobs=("days_obs", "sum"))
+    last = a.sort_values("d1").groupby("journey").last()      # the journey's final listing
+    J["span"] = (J.d1 - J.d0).dt.days.clip(lower=1)
+    J["gone"] = J.d1 < final
+    J["term"] = J.gone & (last.d1 - last.posted).dt.days.between(lo, hi)
+    J["exit"] = J.gone & ~J.term
+    J["vpd"] = J.nv / J.dobs.clip(lower=1)
+    return J
+
+
 # ---------------------------------------------------------------------------
 # 4. ALL METRICS  ->  metrics.json
 # ---------------------------------------------------------------------------
@@ -140,15 +189,14 @@ def metrics(apt, L):
     R["views_per_fav"] = int(L.nv.sum() / max(L.nf.sum(), 1))
     R["clicks_per_fav"] = round(float(L.nc.sum() / max(L.nf.sum(), 1)), 1)
 
-    # ---- SIGNAL 3: exit probability (hazard method) ----
-    # Exit probability over a period = (exits) / (active listing-days) * period_days.
-    # A listing "exits" when its last snapshot precedes the terminal snapshot; its
-    # active listing-days are the days it was observed (exposure). The daily exit
-    # hazard scaled by EXIT_PERIOD_DAYS gives a monthly exit probability, which is
-    # what every exit figure reports. (period_days = window length would exceed
-    # 100%, so a 30-day month is used.)
-    EXIT_PERIOD_DAYS = 30
-    R["exit_period_days"] = EXIT_PERIOD_DAYS
+    # ---- SIGNAL 3: exit probability (constant-hazard survival, paper Eq. 2) ----
+    # Listings are stitched into property journeys (a relisted flat is one journey).
+    # Daily hazard  lambda = E / sum(d_i),  30-day probability P = 1 - exp(-30 lambda).
+    # E counts only genuine exits: a journey still listed on the final date, or one
+    # that vanished exactly at the 42-44 day platform term (administrative
+    # expiry), is censored - it adds exposure days but is not an exit.
+    EXIT_HORIZON_DAYS = 30
+    R["exit_period_days"] = EXIT_HORIZON_DAYS
     dates = sorted(apt.snapshot_date.unique())
     wk1 = dates[0] + pd.Timedelta(days=6)      # first-week cohort cutoff
     final = pd.Timestamp(dates[-1])            # terminal snapshot
@@ -156,30 +204,35 @@ def metrics(apt, L):
     cohort = set(apt[apt.snapshot_date <= wk1].listing_id.unique())
     exited = cohort - present_final
     R["cohort_n"] = len(cohort); R["exit_n"] = len(exited)
-    # first-week cohort's cumulative exit share (used only for the velocity-gap caption)
+    # first-week cohort's cumulative exit share (velocity-gap context only)
     R["cohort_exit_share"] = round(len(exited) / len(cohort) * 100, 0)
 
-    # hazard-based exit probability (all listings, exposure-weighted)
-    L["exited_all"] = L.d1 < final
-    L["exposure"] = L.days_obs.clip(lower=1)
+    J = exit_journeys(apt, L, final)
 
-    def exit_prob(mask):
-        s = L[mask]
-        ad = float(s.exposure.sum())
-        return (int(s.exited_all.sum()) / ad * EXIT_PERIOD_DAYS * 100) if ad > 0 else float("nan")
+    def exit_prob(mask, horizon=EXIT_HORIZON_DAYS):
+        s = J[mask]
+        exposure = float(s.span.sum())
+        if exposure <= 0:
+            return float("nan")
+        lam = int(s.exit.sum()) / exposure
+        return 100 * (1 - np.exp(-lam * horizon))
 
-    R["exit_probability"] = round(exit_prob(L.exited_all.notna()), 0)
+    every = J.index.notna()
+    R["exit_probability"] = round(exit_prob(every), 1)
+    R["exit_probability_60"] = round(exit_prob(every, 60), 1)
+    R["exit_probability_90"] = round(exit_prob(every, 90), 1)
+    R["exit_journeys"] = int(len(J))
+    R["exit_relists_stitched"] = int((J.n_list > 1).sum())
+    R["exit_true"] = int(J.exit.sum())
+    R["exit_term_expired"] = int(J.term.sum())
+    R["exit_still_active"] = int((~J.gone).sum())
 
-    # Fig 7a: demand (view velocity) of truly-exiting vs. still-active journeys.
-    # "true exit" excludes administrative 43-44 day term expirations (treatment A).
-    lo_t, hi_t = config.LISTING_TERM_DAYS
-    tom_all = (L.d1 - L.posted).dt.days
-    active_mask = ~L.exited_all                                 # present at final snapshot
-    trueexit_mask = L.exited_all & ~tom_all.between(lo_t, hi_t)  # genuine departures
-    R["vpd_active_med"] = round(float(L[active_mask].vpd.median()), 1)
-    R["vpd_active_mean"] = round(float(L[active_mask].vpd.mean()), 1)
-    R["vpd_trueexit_med"] = round(float(L[trueexit_mask].vpd.median()), 1)
-    R["vpd_trueexit_mean"] = round(float(L[trueexit_mask].vpd.mean()), 1)
+    # Fig 6a: demand (view velocity) of truly-exiting vs. still-active journeys
+    act, tex = J[~J.gone], J[J.exit]
+    R["vpd_active_med"] = round(float(act.vpd.median()), 1)
+    R["vpd_active_mean"] = round(float(act.vpd.mean()), 1)
+    R["vpd_trueexit_med"] = round(float(tex.vpd.median()), 1)
+    R["vpd_trueexit_mean"] = round(float(tex.vpd.mean()), 1)
 
     L["exited"] = L.index.isin(exited); L["incohort"] = L.index.isin(cohort)
     sub = L[L.incohort]
@@ -236,8 +289,8 @@ def metrics(apt, L):
     R["rooms_dims"] = {int(k): dict(vpd=round(float(v.vpd), 1), n=int(v.n),
                                     clicka=round(float(v.clicka), 1),
                                     fava=round(float(v.fava), 1)) for k, v in rm.iterrows()}
-    R["exit_rooms"] = {int(k): round(exit_prob((L.rn == k)), 0)
-                       for k in range(1, 6) if (L.rn == k).any()}
+    R["exit_rooms"] = {int(k): round(exit_prob(J.rooms == k), 1)
+                       for k in range(1, 6) if (J.rooms == k).any()}
     sa = act[act.rn.between(1, 5)].groupby("rn").age.median()
     R["age_rooms"] = {int(k): int(v) for k, v in sa.items()}
     last = apt.sort_values("snapshot_date").groupby("listing_id").last()
@@ -262,12 +315,12 @@ def metrics(apt, L):
     dd = {}
     for d in sorted(L.district.unique()):
         ld = L[L.district == d]
-        exr = exit_prob(L.district == d)   # monthly exit probability (hazard-based)
+        exr = exit_prob(J.district == d)   # 30-day exit probability (survival)
         ag = act[act.district_en == d].age.median()
         comp_d = ld.loc[ld.exited & ld.tom_completed.ge(0), "tom_completed"].median()
         dd[d] = dict(vpd=round(float(ld.vpd.median()), 1),
                      reach=int(ld.nv.sum()),
-                     absorp=round(float(exr), 0),
+                     absorp=round(float(exr), 1),
                      age=round(float(ag), 0),
                      tom=round(float(comp_d), 0) if pd.notna(comp_d) else None,
                      pv=round(float(ld.price.median() / ld.vpd.median()), 0),

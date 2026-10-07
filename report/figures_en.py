@@ -257,8 +257,8 @@ def build_exit_apartments():
     for bar, s in zip(b, shares):
         a2.text(bar.get_x() + bar.get_width() / 2, s + 1.6, f"{s}%",
                 ha="center", fontweight="bold", fontsize=10.5)
-    a2.set_ylabel("share of exits"); a2.set_ylim(0, max(shares) * 1.16)
-    a2.set_title("(b)  Most exits are non-renewals at the 43-day term",
+    a2.set_ylabel("share of disappeared listings"); a2.set_ylim(0, max(shares) * 1.16)
+    a2.set_title("(b)  Most disappearances are non-renewals at the 43-day term",
                  fontsize=11, fontweight="bold", loc="left")
     plt.tight_layout()
     plt.savefig(out("fig_exit_apartments.pdf"), bbox_inches="tight")
@@ -277,13 +277,14 @@ def build_exit_dims():
     n = [(e - min(ex)) / (max(ex) - min(ex)) for e in ex]
     a1.bar(range(len(order)), ex, color=[cmap(0.25 + 0.75 * v) for v in n], width=0.66)
     for i, e in enumerate(ex):
-        a1.text(i, e + 1.2, f"{e:.0f}%", ha="center", fontsize=8.4, fontweight="bold")
+        a1.annotate(f"{e:.0f}%", (i, e), xytext=(0, 3), textcoords="offset points",
+                     ha="center", va="bottom", fontsize=8.4, fontweight="bold")
     a1.set_xticks(range(len(order)))
     a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
-    extop = max(max(ex), avg_ex) * 1.16
-    a1.set_ylabel("monthly exit probability (%)"); a1.set_ylim(0, extop)
+    extop = max(max(ex), avg_ex, max(R["exit_rooms"].values())) * 1.18
+    a1.set_ylabel("30-day exit probability (%)"); a1.set_ylim(0, extop)
     a1.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
-    a1.text(len(order) - 0.5, avg_ex + 1.5, f"district avg {avg_ex:.0f}%",
+    a1.text(len(order) - 0.5, avg_ex + extop * 0.015, f"district avg {avg_ex:.0f}%",
             fontsize=7.8, color=AVG, ha="right", fontweight="bold")
     a1.set_title("(a)  Exit probability by district",
                  fontsize=10.5, fontweight="bold", loc="left")
@@ -291,9 +292,11 @@ def build_exit_dims():
     ks2 = sorted(er)
     b = a2.bar([f"{k}-rm" for k in ks2], [er[k] for k in ks2], color=GOLD, width=0.62)
     for bar, k in zip(b, ks2):
-        a2.text(bar.get_x() + bar.get_width() / 2, er[k] + 1.2, f"{er[k]:.0f}%",
-                ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("monthly exit probability (%)"); a2.set_ylim(0, extop)
+        a2.annotate(f"{er[k]:.0f}%",
+                ha="center", fontweight="bold", fontsize=9.5,
+                     xy=(bar.get_x() + bar.get_width() / 2, er[k]), xytext=(0, 3),
+                     textcoords="offset points", va="bottom")
+    a2.set_ylabel("30-day exit probability (%)"); a2.set_ylim(0, extop)
     a2.set_title("(b)  Exit probability by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()

@@ -34,6 +34,7 @@ COLUMNS = [
     "price_usd", "area_m2", "rooms", "is_new_building", "renovation",
     "latitude", "longitude", "posted_at", "views", "clicks", "favorites",
     "floor", "total_floors", "building_material", "is_vip", "is_premium", "is_urgently",
+    "address",   # exit journeys: matches a relisted flat to its earlier listing
 ]
 
 

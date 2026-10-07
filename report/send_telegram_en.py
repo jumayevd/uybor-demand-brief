@@ -34,7 +34,7 @@ FIGURES = [
     ("fig_intent_norm_districts", "Figure 5. Normalized purchase intent across districts"),
     ("fig_s2_dimensions", "Figure 6. Purchase intent across market segments"),
     ("fig_exit_apartments", "Figure 7. Demand of exited vs. surviving listings; exit timing around the 43-day term"),
-    ("fig_exit_dims", "Figure 8. Monthly exit probability by district and room count"),
+    ("fig_exit_dims", "Figure 8. 30-day exit probability by district and room count"),
     ("fig_tom_dims", "Figure 9. Time on market (apartments)"),
     ("fig_metrics_panel_apartments", "Figure 10. Heatmap of the four demand signals"),
     ("fig_supply_demand_bands", "Figure 11. Distribution of demand and supply across price segments"),
