@@ -5,7 +5,7 @@ send_telegram_en.py — post the ENGLISH figure set (figures_en/) to Telegram.
 
 Mirror of send_telegram.py for the English figures. Reuses that module's Bot
 API helpers and delivery loop; only the figure directory, captions and header
-differ. The paper's 12 figures are sent (PNG preview + vector PDF each).
+differ. The paper's figures (13 in the current draft) are sent (PNG preview + vector PDF each).
 
 Env:
   TELEGRAM_BOT_TOKEN   bot token (shared with the Uzbek sender)
@@ -25,9 +25,9 @@ PNG_DIR = os.path.join(HERE, "figures_en_png")
 METRICS = os.path.join(HERE, "build", "metrics.json")
 CHAT_EN_ENV = "TELEGRAM_CHAT_EN"
 
-# exactly the working paper's 12 figures, in its order and with its captions.
+# exactly the working paper's figures, in its order and with its captions.
 # Single source of truth: paper_figures.PAPER (update it when the draft changes).
-FIGURES = [(name, f"Figure {n}. {cap}") for n, name, cap in PAPER]
+FIGURES = [(name, f"Figure {n}. {cap}") for n, name, _stem, cap in PAPER]
 
 
 def _header():

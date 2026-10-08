@@ -13,7 +13,7 @@ on:  # yamllint disable-line rule:truthy
         required: false
         default: "2026-09-24"
       post:
-        description: "Post to the Telegram channel (one-off): none, paper (figures 1-12), extra (demand map), all"
+        description: "Post to the Telegram channel (one-off): none, paper (all figures in the draft), extra (built but not in the draft), all"
         type: choice
         options: [none, paper, extra, all]
         required: false
