@@ -150,7 +150,8 @@ def exit_journeys(apt, L, final):
     last = a.sort_values("d1").groupby("journey").last()      # the journey's final listing
     J["span"] = (J.d1 - J.d0).dt.days.clip(lower=1)
     J["gone"] = J.d1 < final
-    J["term"] = J.gone & (last.d1 - last.posted).dt.days.between(lo, hi)
+    J["tom"] = (last.d1 - last.posted).dt.days            # age of final listing when last seen
+    J["term"] = J.gone & J.tom.between(lo, hi)
     J["exit"] = J.gone & ~J.term
     J["vpd"] = J.nv / J.dobs.clip(lower=1)
     return J
@@ -174,7 +175,8 @@ def metrics(apt, L):
     R["med_vpd"] = round(float(L.vpd.median()), 1)
     R["mean_vpd"] = round(float(L.vpd.mean()), 1)
     R["ratio"] = round(R["mean_vpd"] / R["med_vpd"], 1)
-    vs = np.sort(L.vpd.values)[::-1]; tot = vs.sum(); n = len(vs)
+    # concentration (Fig 1b): listings ranked by new views; share of all new views
+    vs = np.sort(L.nv.values)[::-1]; tot = vs.sum(); n = len(vs)
     R["top10"] = round(float(vs[: int(n * .1)].sum() / tot * 100), 1)
     R["top25"] = round(float(vs[: int(n * .25)].sum() / tot * 100), 1)
     R["bot50"] = round(float(vs[int(n * .5):].sum() / tot * 100), 1)
@@ -240,19 +242,21 @@ def metrics(apt, L):
     R["vpd_stay"] = round(float(sub[~sub.exited].vpd.median()), 1)
     R["exit_gap"] = round(R["vpd_exit"] / R["vpd_stay"], 1)
 
-    # exit decomposition against the platform listing term (renewal wall)
+    # exit decomposition against the platform listing term (renewal wall), over
+    # ALL journeys that disappeared (the Eq. 2 population): the 42-44 day bar is
+    # exactly the censored term expiries; the other two are the genuine exits.
+    # tom_completed (cohort, per listing) is kept for the completed-ToM medians.
     L["tom_completed"] = np.where(L.exited, (L.d1 - L.posted).dt.days, np.nan)
-    ex = L[L.exited & L.tom_completed.ge(0)]
     lo, hi = config.LISTING_TERM_DAYS
-    early = ex.tom_completed < lo
-    wall = ex.tom_completed.between(lo, hi)
-    late = ex.tom_completed > hi
+    G = J[J.gone & J.tom.ge(0)]
+    early, wall, late = G.tom < lo, G.tom.between(lo, hi), G.tom > hi
+    R["exit_disappeared"] = int(len(G))
     R["exit_early_pct"] = round(float(early.mean() * 100), 1)
     R["exit_wall_pct"] = round(float(wall.mean() * 100), 1)
     R["exit_late_pct"] = round(float(late.mean() * 100), 1)
-    R["vpd_early_exit"] = round(float(ex[early].vpd.median()), 1)
-    R["vpd_wall_exit"] = round(float(ex[wall].vpd.median()), 1)
-    R["vpd_late_exit"] = round(float(ex[late].vpd.median()), 1)
+    R["vpd_early_exit"] = round(float(G[early].vpd.median()), 1)
+    R["vpd_wall_exit"] = round(float(G[wall].vpd.median()), 1)
+    R["vpd_late_exit"] = round(float(G[late].vpd.median()), 1)
 
     # ---- SIGNAL 4: time on market ----
     comp = L.loc[L.exited & L.tom_completed.ge(0), "tom_completed"]
