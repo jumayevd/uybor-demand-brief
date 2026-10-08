@@ -315,7 +315,9 @@ def build_tom_dims():
                                  gridspec_kw={"width_ratios": [1.7, 1]})
     order = sorted(dd, key=lambda d: dd[d]["age"])
     ages = [dd[d]["age"] for d in order]
-    avg_age = float(np.mean([dd[d]["age"] for d in dd]))
+    # reference line: city-wide median over ALL active listings (same basis as the
+    # room-count bars), not the unweighted mean of the 12 district medians
+    avg_age = float(R["stockage_med"])
     cmap = LinearSegmentedColormap.from_list("p", ["#ece9f2", PURP])
     nrm = [(a - min(ages)) / (max(ages) - min(ages)) for a in ages]
     a1.barh(range(len(order)), ages, color=[cmap(0.2 + 0.8 * (1 - v)) for v in nrm],
@@ -326,7 +328,7 @@ def build_tom_dims():
     a1.invert_yaxis()
     a1.set_xlabel("Bozorda qolish muddati (kun)"); a1.set_xlim(0, max(ages) * 1.18)
     a1.axvline(avg_age, color=AVG, lw=1.3, ls="--")
-    a1.text(avg_age + 0.5, len(order) - 0.5, f"o'rtacha {avg_age:.0f}",
+    a1.text(avg_age + 0.5, len(order) - 0.5, f"shahar medianasi {avg_age:.0f}",
             fontsize=7.8, color=AVG, va="center", fontweight="bold")
     ar = {int(k): v for k, v in R["age_rooms"].items()}
     ks3 = sorted(ar)
@@ -336,6 +338,8 @@ def build_tom_dims():
                 ha="center", fontweight="bold", fontsize=9.5)
     a2.set_ylabel("mediana bozorda qolish (kun)"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.15)
     a2.axhline(avg_age, color=AVG, lw=1.3, ls="--")
+    a2.text(len(ks3) - 0.5, avg_age + 0.6, f"shahar medianasi {avg_age:.0f}",
+            fontsize=7.8, color=AVG, ha="right", va="bottom", fontweight="bold")
     plt.tight_layout()
     plt.savefig(out("fig_tom_dims.pdf"), bbox_inches="tight")
     plt.close()
