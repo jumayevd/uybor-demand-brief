@@ -44,6 +44,10 @@ BOUNDS = dict(
 # platform listing term used in the exit decomposition (renewal wall = [lo, hi])
 LISTING_TERM_DAYS = (42, 44)
 
+# districts with fewer listings than this are left out of exit-based district
+# figures (too few journeys for a meaningful exit probability)
+MIN_DISTRICT_LISTINGS = 40
+
 # price bands for the supply-vs-demand figure
 PRICE_BANDS = [30_000, 50_000, 75_000, 100_000, 150_000, 250_000, 1_000_000]
 PRICE_BAND_LABELS = ["30-50k", "50-75k", "75-100k", "100-150k", "150-250k", "250k+"]

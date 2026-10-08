@@ -273,7 +273,9 @@ def build_exit_apartments():
 
 def build_exit_dims():
     """S3: Chiqish darajasi tuman / xonalar bo'yicha + o'rtacha chiziq."""
-    dd = R["districts"]
+    dropped = sorted(k for k, v in R["districts"].items()
+                     if v["nlist"] < config.MIN_DISTRICT_LISTINGS)
+    dd = {k: v for k, v in R["districts"].items() if k not in dropped}
     order = sorted(dd, key=lambda d: -dd[d]["absorp"])
     ex = [dd[d]["absorp"] for d in order]
     avg_ex = float(np.mean([dd[d]["absorp"] for d in dd]))
@@ -302,6 +304,8 @@ def build_exit_dims():
                      textcoords="offset points", va="bottom")
     a2.set_ylabel("30 kunlik chiqish ehtimoli, %"); a2.set_ylim(0, extop)
     a2.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
+    if dropped:
+        fig.text(0.01, -0.03, f"Ko'rsatilmagan: {', '.join(dropped)} ({config.MIN_DISTRICT_LISTINGS} tadan kam e'lon).", ha="left", fontsize=7.8, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_exit_dims.pdf"), bbox_inches="tight")
     plt.close()
@@ -327,19 +331,17 @@ def build_tom_dims():
     a1.set_yticks(range(len(order))); a1.set_yticklabels(order, fontsize=8.4)
     a1.invert_yaxis()
     a1.set_xlabel("Bozorda qolish muddati (kun)"); a1.set_xlim(0, max(ages) * 1.18)
-    a1.axvline(avg_age, color=AVG, lw=1.3, ls="--")
-    a1.text(avg_age + 0.5, len(order) - 0.5, f"shahar medianasi {avg_age:.0f}",
-            fontsize=7.8, color=AVG, va="center", fontweight="bold")
+    a1.axvline(avg_age, color=AVG, lw=1.3, ls="--", label=f"shahar medianasi: {avg_age:.0f} kun")
+    a1.legend(loc="upper right", frameon=False, fontsize=8.5)
     ar = {int(k): v for k, v in R["age_rooms"].items()}
     ks3 = sorted(ar)
     b = a2.bar([f"{k}-xona" for k in ks3], [ar[k] for k in ks3], color=PURP, width=0.62)
     for bar, k in zip(b, ks3):
-        a2.text(bar.get_x() + bar.get_width() / 2, ar[k] + 1, f"{ar[k]}",
-                ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("mediana bozorda qolish (kun)"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.15)
-    a2.axhline(avg_age, color=AVG, lw=1.3, ls="--")
-    a2.text(len(ks3) - 0.5, avg_age + 0.6, f"shahar medianasi {avg_age:.0f}",
-            fontsize=7.8, color=AVG, ha="right", va="bottom", fontweight="bold")
+        a2.text(bar.get_x() + bar.get_width() / 2, ar[k] - 1.2, f"{ar[k]}",
+                ha="center", va="top", color="white", fontweight="bold", fontsize=10)
+    a2.set_ylabel("mediana bozorda qolish (kun)"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.3)
+    a2.axhline(avg_age, color=AVG, lw=1.3, ls="--", label=f"shahar medianasi: {avg_age:.0f} kun")
+    a2.legend(loc="upper center", frameon=False, fontsize=8.5)
     plt.tight_layout()
     plt.savefig(out("fig_tom_dims.pdf"), bbox_inches="tight")
     plt.close()
@@ -355,6 +357,8 @@ def build_metrics_panel_apartments():
                          click=intent[dist]["clicka"],
                          exit=d[dist]["absorp"], age=d[dist]["age"]))
     D = pd.DataFrame(rows).set_index("district").sort_values("vpd", ascending=False)
+    small = [x for x in D.index if d[x]["nlist"] < config.MIN_DISTRICT_LISTINGS]
+    D.loc[small, "exit"] = np.nan          # too few journeys: exit probability not shown
     avg_row = dict(vpd=round(D.vpd.mean(), 1), click=round(D.click.mean(), 1),
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Talab tezligi", "yangi ko'rishlar / kun", False, "{:.1f}"),
@@ -368,7 +372,7 @@ def build_metrics_panel_apartments():
     colcolor = {"vpd": TEAL, "click": GOLD, "exit": RUST, "age": PURP}
 
     def shade(vals, invert):
-        v = np.array(vals, float); lo, hi = v.min(), v.max()
+        v = np.array(vals, float); lo, hi = np.nanmin(v), np.nanmax(v)
         n = (v - lo) / (hi - lo + 1e-9)
         return 1 - n if invert else n
 
@@ -381,7 +385,14 @@ def build_metrics_panel_apartments():
                 fontsize=8.7, color=colcolor[key])
         ax.text(j + 0.5, nrows - 0.24, sub, ha="center", fontsize=7.1, color=GREY)
         for rr in range(len(D)):
-            val = D[key].iloc[rr]; c = cmaps[key](0.15 + 0.85 * n[rr])
+            val = D[key].iloc[rr]
+            if pd.isna(val):                 # not shown (small district)
+                ax.add_patch(plt.Rectangle((j + 0.06, nrows - 1 - rr - 0.4), 0.88, 0.8,
+                                           fc="#f2f2f2", ec="white", lw=1.6))
+                ax.text(j + 0.5, nrows - 1 - rr, "—", ha="center", va="center",
+                        fontsize=9.3, color=GREY)
+                continue
+            c = cmaps[key](0.15 + 0.85 * n[rr])
             tc = "white" if n[rr] > 0.55 else INK
             ax.add_patch(plt.Rectangle((j + 0.06, nrows - 1 - rr - 0.4), 0.88, 0.8,
                                        fc=c, ec="white", lw=1.6))
@@ -398,6 +409,9 @@ def build_metrics_panel_apartments():
     ax.text(-0.06, 0, "TUMAN O'RTACHASI", ha="right", va="center",
             fontsize=8.5, color=INK, fontweight="bold")
     plt.tight_layout()
+    if small:
+        ax.text(2, -0.95, f"— {', '.join(small)}: {config.MIN_DISTRICT_LISTINGS} tadan kam e'lon; chiqish ehtimoli ko'rsatilmagan.",
+                ha="center", va="center", fontsize=7.5, color=GREY)
     plt.savefig(out("fig_metrics_panel_apartments.pdf"), bbox_inches="tight")
     plt.close()
     print("  fig_metrics_panel_apartments.pdf")

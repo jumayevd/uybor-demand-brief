@@ -267,7 +267,9 @@ def build_exit_apartments():
 
 
 def build_exit_dims():
-    dd = R["districts"]
+    dropped = sorted(k for k, v in R["districts"].items()
+                     if v["nlist"] < config.MIN_DISTRICT_LISTINGS)
+    dd = {k: v for k, v in R["districts"].items() if k not in dropped}
     order = sorted(dd, key=lambda d: -dd[d]["absorp"])
     ex = [dd[d]["absorp"] for d in order]
     avg_ex = float(np.mean([dd[d]["absorp"] for d in dd]))
@@ -299,6 +301,8 @@ def build_exit_dims():
     a2.set_ylabel("30-day exit probability (%)"); a2.set_ylim(0, extop)
     a2.set_title("(b)  Exit probability by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
+    if dropped:
+        fig.text(0.01, -0.03, f"Not shown: {', '.join(dropped)} (fewer than {config.MIN_DISTRICT_LISTINGS} listings).", ha="left", fontsize=7.8, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_exit_dims.pdf"), bbox_inches="tight")
     plt.close()
@@ -323,21 +327,19 @@ def build_tom_dims():
     a1.set_yticks(range(len(order))); a1.set_yticklabels(order, fontsize=8.4)
     a1.invert_yaxis()
     a1.set_xlabel("median time on market (days)"); a1.set_xlim(0, max(ages) * 1.18)
-    a1.axvline(avg_age, color=AVG, lw=1.3, ls="--")
-    a1.text(avg_age + 0.5, len(order) - 0.5, f"city median {avg_age:.0f}",
-            fontsize=7.8, color=AVG, va="center", fontweight="bold")
+    a1.axvline(avg_age, color=AVG, lw=1.3, ls="--", label=f"city median: {avg_age:.0f} days")
+    a1.legend(loc="upper right", frameon=False, fontsize=8.5)
     a1.set_title("(a)  Time on market by district",
                  fontsize=10.5, fontweight="bold", loc="left")
     ar = {int(k): v for k, v in R["age_rooms"].items()}
     ks3 = sorted(ar)
     b = a2.bar([f"{k}-rm" for k in ks3], [ar[k] for k in ks3], color=PURP, width=0.62)
     for bar, k in zip(b, ks3):
-        a2.text(bar.get_x() + bar.get_width() / 2, ar[k] + 1, f"{ar[k]}",
-                ha="center", fontweight="bold", fontsize=9.5)
-    a2.set_ylabel("median days on market"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.15)
-    a2.axhline(avg_age, color=AVG, lw=1.3, ls="--")
-    a2.text(len(ks3) - 0.5, avg_age + 0.6, f"city median {avg_age:.0f}",
-            fontsize=7.8, color=AVG, ha="right", va="bottom", fontweight="bold")
+        a2.text(bar.get_x() + bar.get_width() / 2, ar[k] - 1.2, f"{ar[k]}",
+                ha="center", va="top", color="white", fontweight="bold", fontsize=10)
+    a2.set_ylabel("median days on market"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.3)
+    a2.axhline(avg_age, color=AVG, lw=1.3, ls="--", label=f"city median: {avg_age:.0f} days")
+    a2.legend(loc="upper center", frameon=False, fontsize=8.5)
     a2.set_title("(b)  Time on market by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
@@ -354,6 +356,8 @@ def build_metrics_panel_apartments():
                          click=intent[dist]["clicka"],
                          exit=d[dist]["absorp"], age=d[dist]["age"]))
     D = pd.DataFrame(rows).set_index("district").sort_values("vpd", ascending=False)
+    small = [x for x in D.index if d[x]["nlist"] < config.MIN_DISTRICT_LISTINGS]
+    D.loc[small, "exit"] = np.nan          # too few journeys: exit probability not shown
     avg_row = dict(vpd=round(D.vpd.mean(), 1), click=round(D.click.mean(), 1),
                    exit=round(D["exit"].mean(), 0), age=round(D.age.mean(), 0))
     cols = [("vpd", "Views & Velocity", "median new views / day", False, "{:.1f}"),
@@ -367,20 +371,27 @@ def build_metrics_panel_apartments():
     colcolor = {"vpd": TEAL, "click": GOLD, "exit": RUST, "age": PURP}
 
     def shade(vals, invert):
-        v = np.array(vals, float); lo, hi = v.min(), v.max()
+        v = np.array(vals, float); lo, hi = np.nanmin(v), np.nanmax(v)
         n = (v - lo) / (hi - lo + 1e-9)
         return 1 - n if invert else n
 
     nrows = len(D) + 1
     fig, ax = plt.subplots(figsize=(9.6, 7.2)); ax.axis("off")
-    ax.set_xlim(0, 4); ax.set_ylim(-0.7, nrows + 0.7)
+    ax.set_xlim(0, 4); ax.set_ylim(-1.2, nrows + 0.7)
     for j, (key, title, sub, inv, fmt) in enumerate(cols):
         n = shade(D[key], inv)
         ax.text(j + 0.5, nrows + 0.2, title, ha="center", va="bottom", fontweight="bold",
                 fontsize=9.5, color=colcolor[key])
         ax.text(j + 0.5, nrows - 0.18, sub, ha="center", fontsize=7.1, color=GREY)
         for rr in range(len(D)):
-            val = D[key].iloc[rr]; c = cmaps[key](0.15 + 0.85 * n[rr])
+            val = D[key].iloc[rr]
+            if pd.isna(val):                 # not shown (small district)
+                ax.add_patch(plt.Rectangle((j + 0.06, nrows - 1 - rr - 0.4), 0.88, 0.8,
+                                           fc="#f2f2f2", ec="white", lw=1.6))
+                ax.text(j + 0.5, nrows - 1 - rr, "—", ha="center", va="center",
+                        fontsize=9.3, color=GREY)
+                continue
+            c = cmaps[key](0.15 + 0.85 * n[rr])
             tc = "white" if n[rr] > 0.55 else INK
             ax.add_patch(plt.Rectangle((j + 0.06, nrows - 1 - rr - 0.4), 0.88, 0.8,
                                        fc=c, ec="white", lw=1.6))
@@ -397,6 +408,9 @@ def build_metrics_panel_apartments():
     ax.text(-0.06, 0, "DISTRICT AVERAGE", ha="right", va="center",
             fontsize=8.5, color=INK, fontweight="bold")
     plt.tight_layout()
+    if small:
+        ax.text(2, -0.95, f"— {', '.join(small)}: fewer than {config.MIN_DISTRICT_LISTINGS} listings; exit probability not shown.",
+                ha="center", va="center", fontsize=7.5, color=GREY)
     plt.savefig(out("fig_metrics_panel_apartments.pdf"), bbox_inches="tight")
     plt.close()
     print("  fig_metrics_panel_apartments.pdf")
@@ -642,14 +656,20 @@ def build_dynamics_districts():
     (24th-to-24th): (a) demand reach and (b) click-through rate, by district."""
     import timeseries as TS
     anchors = TS.resolve_anchors(P)
+    dropped = sorted(k for k, v in R["districts"].items()
+                     if v["nlist"] < config.MIN_DISTRICT_LISTINGS)
     dist = pd.concat([TS.series(P[P.district_en == d], anchors, d)
-                      for d in sorted(P.district_en.unique())], ignore_index=True)
+                      for d in sorted(P.district_en.unique()) if d not in dropped],
+                     ignore_index=True)
     fig, (a1, a2) = plt.subplots(2, 1, figsize=(14, 11))
     TS.draw_multihorizon(a1, dist, "new_views", "new views in the period",
                          "(a)  Demand reach by district", "{:,.0f}",
                          thousands=True, title_size=12)
     TS.draw_multihorizon(a2, dist, "ctr_pct", "clicks per 100 new views",
                          "(b)  Click-through rate by district", "{:.2f}", title_size=12)
+    if dropped:
+        fig.text(0.01, -0.01, f"Not shown: {', '.join(dropped)} (fewer than "
+                 f"{config.MIN_DISTRICT_LISTINGS} listings).", ha="left", fontsize=8, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_dynamics_districts.pdf"), bbox_inches="tight")
     plt.close()
