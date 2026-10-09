@@ -277,13 +277,14 @@ def build_exit_dims():
                                  gridspec_kw={"width_ratios": [1.7, 1]})
     cmap = LinearSegmentedColormap.from_list("g", ["#f5ecd8", GOLD])
     n = [(e - min(ex)) / (max(ex) - min(ex)) for e in ex]
-    a1.bar(range(len(order)), ex, color=[cmap(0.25 + 0.75 * v) for v in n], width=0.66)
+    a1.bar(range(len(order)), ex, color=[cmap(0.55 + 0.45 * v) for v in n], width=0.66)
+    extop = max(max(ex), avg_ex, max(R["exit_rooms"].values())) * 1.18
+    # numbers along the bar bases (as in Fig 9), so the average line never crosses one
     for i, e in enumerate(ex):
-        a1.annotate(f"{e:.0f}%", (i, e), xytext=(0, 3), textcoords="offset points",
-                     ha="center", va="bottom", fontsize=8.4, fontweight="bold")
+        a1.text(i, extop * 0.03, f"{e:.0f}%", ha="center", va="bottom", fontsize=8.4,
+                fontweight="bold", color="white", zorder=4)
     a1.set_xticks(range(len(order)))
     a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
-    extop = max(max(ex), avg_ex, max(R["exit_rooms"].values())) * 1.18
     a1.set_ylabel("30-day exit probability (%)"); a1.set_ylim(0, extop)
     a1.axhline(avg_ex, color=AVG, lw=1.3, ls="--")
     a1.text(len(order) - 0.5, avg_ex + extop * 0.015, f"district avg {avg_ex:.0f}%",
@@ -294,10 +295,9 @@ def build_exit_dims():
     ks2 = sorted(er)
     b = a2.bar([f"{k}-rm" for k in ks2], [er[k] for k in ks2], color=GOLD, width=0.62)
     for bar, k in zip(b, ks2):
-        a2.annotate(f"{er[k]:.0f}%",
-                ha="center", fontweight="bold", fontsize=9.5,
-                     xy=(bar.get_x() + bar.get_width() / 2, er[k]), xytext=(0, 3),
-                     textcoords="offset points", va="bottom")
+        a2.text(bar.get_x() + bar.get_width() / 2, extop * 0.03, f"{er[k]:.0f}%",
+                ha="center", va="bottom", fontweight="bold", fontsize=9.5,
+                color="white", zorder=4)
     a2.set_ylabel("30-day exit probability (%)"); a2.set_ylim(0, extop)
     a2.set_title("(b)  Exit probability by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
@@ -492,9 +492,10 @@ def build_tightness_districts():
     for yi, v, n in zip(y, vals, ns):
         ax.text(xmax * 0.008, yi, f"n={n}", va="center", ha="left",
                 fontsize=7, color="white", fontweight="bold", zorder=4)
-        ax.text(v + xmax * 0.012, yi, f"{v:.1f}", va="center", ha="left",
-                fontsize=8.6, color=INK, fontweight="bold")
-    ax.axvline(city, color=AVG, lw=1.3, ls="--", zorder=3)
+        # value inside the bar end, so the city-average line never crosses it
+        ax.text(v - xmax * 0.008, yi, f"{v:.1f}", va="center", ha="right",
+                fontsize=8.6, color="white", fontweight="bold", zorder=4)
+    ax.axvline(city, color=AVG, lw=1.3, ls="--", zorder=1)   # behind the bars
     ax.text(city, len(order) - 0.35, f"city average {city:.1f}", ha="center",
             va="bottom", fontsize=8, color=AVG, fontweight="bold")
     ax.set_yticks(y); ax.set_yticklabels(order, fontsize=9)
