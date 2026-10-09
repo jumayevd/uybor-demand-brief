@@ -45,13 +45,23 @@ def load_panel():
 
 
 def cut_to_end(df):
-    """Optional cut-off: PANEL_END=YYYY-MM-DD keeps snapshots up to that date
-    (used to freeze the paper's figures at a fixed window). Unset = all data."""
-    end = os.environ.get("PANEL_END")
-    if not end:
+    """Optional window: PANEL_START / PANEL_END = YYYY-MM-DD keep snapshots dated
+    within [start, end], both inclusive (used to freeze the paper's figures at a
+    fixed window). Unset = all data.
+
+    Snapshots are taken at ~20:00 UTC (~01:00 Tashkent the next day), so the
+    snapshot dated 30 Jun opens Tashkent 1 July and the one dated 30 Sep closes
+    30 September: PANEL_START=2026-06-30, PANEL_END=2026-09-30 is Q3 2026."""
+    start, end = os.environ.get("PANEL_START"), os.environ.get("PANEL_END")
+    if not (start or end):
         return df
     d = pd.to_datetime(df.snapshot_date)
-    return df[d <= pd.Timestamp(end)].copy()
+    keep = pd.Series(True, index=df.index)
+    if start:
+        keep &= d >= pd.Timestamp(start)
+    if end:
+        keep &= d <= pd.Timestamp(end)
+    return df[keep].copy()
 
 
 # ---------------------------------------------------------------------------

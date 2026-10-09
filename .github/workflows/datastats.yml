@@ -6,10 +6,14 @@ name: uybor-data-stats
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
     inputs:
+      start:
+        description: "First snapshot date to include (YYYY-MM-DD)"
+        required: false
+        default: "2026-06-30"
       end:
         description: "Last snapshot date to include (YYYY-MM-DD)"
         required: false
-        default: "2026-09-24"
+        default: "2026-09-30"
 
 permissions:
   contents: read
@@ -37,6 +41,7 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}
+          STATS_START: ${{ inputs.start }}
           STATS_END: ${{ inputs.end }}
         run: |
           python pull_supabase.py

@@ -3,7 +3,7 @@
 data_stats.py — exact sample statistics for the paper's Data section.
 =====================================================================
 
-    python data_stats.py            # window 2026-06-24 .. 2026-09-24
+    python data_stats.py            # window 2026-06-30 .. 2026-09-30 (Q3 2026)
     STATS_END=2026-10-24 python data_stats.py
 
 Uses pipeline.load_panel() (same v1+v2 merge and de-duplication as every
@@ -24,8 +24,8 @@ import pandas as pd
 import config
 import pipeline
 
-START = pd.Timestamp(os.environ.get("STATS_START", "2026-06-24"))
-END = pd.Timestamp(os.environ.get("STATS_END", "2026-09-24"))
+START = pd.Timestamp(os.environ.get("STATS_START", "2026-06-30"))
+END = pd.Timestamp(os.environ.get("STATS_END", "2026-09-30"))
 COUNTERS = ["views", "clicks", "favorites"]
 
 

@@ -659,7 +659,7 @@ def build_hedonic_results():
 
 def build_dynamics_districts():
     """Fig 10 (paper) — demand dynamics across three monthly windows
-    (24th-to-24th): (a) demand reach and (b) click-through rate, by district."""
+    (calendar months of Q3 2026): (a) demand reach and (b) click-through rate."""
     import timeseries as TS
     anchors = TS.resolve_anchors(P)
     dropped = sorted(k for k, v in R["districts"].items()

@@ -3,9 +3,9 @@
 paper_figures.py — build the working paper's figures, frozen at a cut-off date.
 ==============================================================================
 
-    PANEL_END=2026-09-24 python paper_figures.py
+    PANEL_START=2026-06-30 PANEL_END=2026-09-30 python paper_figures.py   # Q3 2026
 
-Runs pipeline + figures_en on data up to PANEL_END, then copies the figures the
+Runs pipeline + figures_en on snapshots within [PANEL_START, PANEL_END], then copies the figures the
 paper uses into paper_figures/ under the paper's own numbering, as vector PDF
 plus 300-DPI JPG, with captions.txt and the metrics.json behind them (handy for
 reading numbers into the text). Figures on Telegram but not in the current
@@ -43,7 +43,7 @@ PAPER = [
     (10, "fig_metrics_panel_apartments", "Figure09_metrics_panel_apartments",
      "Heatmap of the four demand signals"),
     (11, "fig_dynamics_districts", "Figure10_dynamics_districts",
-     "Demand dynamics across three consecutive monthly windows (24th-to-24th): "
+     "Demand dynamics across the three months of Q3 2026 (July, August, September): "
      "(a) demand reach and (b) click-through rate by district"),
     (12, "fig_supply_demand_bands", "Figure11_supply_demand_bands",
      "Distribution of demand and supply across price segments"),

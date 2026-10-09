@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-timeseries.py — 3 monthly, district-wise demand trends (24th-to-24th).
+timeseries.py — monthly, district-wise demand trends (calendar months).
 ======================================================================
 
-Anchors the panel at the 24th of each month (the scraper's natural month
-boundary): 24 Jun -> 24 Jul -> 24 Aug -> 24 Sep = three clean months. For each
+Anchors the panel at month ends: snapshots dated 30 Jun -> 31 Jul -> 31 Aug ->
+30 Sep = July, August, September (Q3 2026). Snapshots are taken at ~01:00
+Tashkent the day after their date, so each anchor closes its calendar month. For each
 month and district (plus an OVERALL row) it reports both the LEVEL at the anchor
 and the FLOW over the month, so the trend in views / velocity / clicks / saves
 is visible month to month.
@@ -34,7 +35,7 @@ GREY, INK = "#9AA0A6", "#2b2b2b"
 OUT = os.path.join(os.path.dirname(__file__), "timeseries_out")
 os.makedirs(OUT, exist_ok=True)
 
-ANCHORS = ["2026-06-24", "2026-07-24", "2026-08-24", "2026-09-24"]
+ANCHORS = ["2026-06-30", "2026-07-31", "2026-08-31", "2026-09-30"]
 
 
 def load():
@@ -150,7 +151,7 @@ def heatmap(dist_df, metric, title, fmt, hi, fname):
                     color="white" if norm[i, j] > 0.55 else INK,
                     fontweight="bold" if norm[i, j] > 0.8 else "normal")
     ax.set_title(title, fontsize=11, fontweight="bold", loc="left", pad=10)
-    ax.set_xlabel("month ending on the 24th", fontsize=8.5, color=GREY)
+    ax.set_xlabel("calendar month", fontsize=8.5, color=GREY)
     for s in ax.spines.values():
         s.set_visible(False)
     ax.tick_params(length=0)
@@ -164,15 +165,15 @@ def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
                       palette=None):
     """Grouped bars on ax: each district, one bar per month-long period.
 
-    Bars are monthly FLOWS, so each is labelled by its period (e.g. Jun-Jul),
-    not the end-of-month anchor. thousands=True labels values as e.g. "199k".
+    Bars are monthly FLOWS between month-end anchors, so each is labelled by the
+    calendar month it covers (the anchor's month, e.g. July). thousands=True
+    labels values as e.g. "199k".
     """
     def lab(v):
         return f"{v / 1000:.0f}k" if thousands else fmt.format(v)
     d = dist_df[dist_df[metric].notna()].copy()
     d["anchor_date"] = pd.to_datetime(d.anchor_date)
-    d["period"] = (pd.to_datetime(d.period_start).dt.strftime("%b") + "–"
-                   + d.anchor_date.dt.strftime("%b"))
+    d["period"] = d.anchor_date.dt.strftime("%B")
     order = (d[["period", "anchor_date"]].drop_duplicates()
              .sort_values("anchor_date").period.tolist())
     piv = d.pivot(index="scope", columns="period", values=metric)[order]
@@ -194,7 +195,7 @@ def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
     ax.set_title(title, fontsize=title_size, fontweight="bold", loc="left")
     if legend_title:
         ax.legend(frameon=False, fontsize=10, ncol=len(order), loc="upper right",
-                  title="period (24th-to-24th)", title_fontsize=9)
+                  title="calendar month", title_fontsize=9)
     else:
         ax.legend(frameon=False, fontsize=8.5, ncol=len(order), loc="upper right")
 
@@ -231,7 +232,7 @@ def overall_chart(ov):
         ax.set_ylim(bottom=0)
         ax.set_xticks(list(x)); ax.set_xticklabels([f"{m}\n2026" for m in ov.mlab], fontsize=8.5)
         ax.set_xlim(-0.4, len(ov) - 0.6)
-    fig.suptitle("Tashkent apartments — monthly demand trend (overall, 24th-to-24th)",
+    fig.suptitle("Tashkent apartments — monthly demand trend (overall, calendar months)",
                  fontsize=14, fontweight="bold", x=0.02, ha="left")
     plt.tight_layout(rect=(0, 0, 1, 0.97))
     plt.savefig(os.path.join(OUT, "overall_trends.png"), dpi=150, bbox_inches="tight")

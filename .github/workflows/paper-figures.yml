@@ -2,16 +2,20 @@
 name: uybor-paper-figures
 
 # Dispatch-only. Builds the working paper's figures on live data frozen at a
-# cut-off date (default 24 Sep 2026 = the paper's 3-month window) and uploads
+# window (default Q3 2026: snapshots 30 Jun - 30 Sep = 1 July - 30 September) and uploads
 # them, numbered as in the paper, as PDF + 300-DPI JPG. Posts to Telegram only
 # when the 'post' input is ticked.
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
     inputs:
+      start:
+        description: "First snapshot date to include (YYYY-MM-DD; 30 Jun = opens 1 July Tashkent)"
+        required: false
+        default: "2026-06-30"
       end:
         description: "Last snapshot date to include (YYYY-MM-DD)"
         required: false
-        default: "2026-09-24"
+        default: "2026-09-30"
       post:
         description: "Post to the Telegram channel (one-off): none, paper (all figures in the draft), extra (built but not in the draft), all"
         type: choice
@@ -49,6 +53,7 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}
+          PANEL_START: ${{ inputs.start }}
           PANEL_END: ${{ inputs.end }}
         run: |
           python pull_supabase.py
