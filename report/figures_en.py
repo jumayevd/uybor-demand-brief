@@ -322,15 +322,15 @@ def build_tom_dims():
     avg_age = float(R["stockage_med"])
     ar = {int(k): v for k, v in R["age_rooms"].items()}
     ks3 = sorted(ar)
-    LBL = dict(fc="white", ec="none", pad=0.8)   # keeps the dashed line off the numbers
     top = max(max(ages), max(ar.values()), avg_age) * 1.18
     cmap = LinearSegmentedColormap.from_list("t", ["#d5e6e9", TEAL])
     nrm = [(a - min(ages)) / (max(ages) - min(ages)) for a in ages]
-    a1.bar(range(len(order)), ages, color=[cmap(0.25 + 0.75 * v) for v in nrm], width=0.66)
+    a1.bar(range(len(order)), ages, color=[cmap(0.55 + 0.45 * v) for v in nrm], width=0.66)
     for i, a in enumerate(ages):
-        a1.annotate(f"{a:.0f}", (i, a), xytext=(0, 3), textcoords="offset points",
-                    ha="center", va="bottom", fontsize=8.4, fontweight="bold",
-                    bbox=LBL, zorder=4)
+        # numbers sit along the bar bases, far below the city-median line, so it
+        # never crosses one
+        a1.text(i, top * 0.03, f"{a:.0f}", ha="center", va="bottom", fontsize=8.4,
+                fontweight="bold", color="white", zorder=4)
     a1.set_xticks(range(len(order)))
     a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
     a1.set_ylabel("median days on market"); a1.set_ylim(0, top)
@@ -341,10 +341,9 @@ def build_tom_dims():
                  fontsize=10.5, fontweight="bold", loc="left")
     b = a2.bar([f"{k}-rm" for k in ks3], [ar[k] for k in ks3], color=TEAL, width=0.62)
     for bar, k in zip(b, ks3):
-        a2.annotate(f"{ar[k]:.0f}", (bar.get_x() + bar.get_width() / 2, ar[k]),
-                    xytext=(0, 3), textcoords="offset points",
-                    ha="center", va="bottom", fontweight="bold", fontsize=9.5,
-                    bbox=LBL, zorder=4)
+        a2.text(bar.get_x() + bar.get_width() / 2, top * 0.03, f"{ar[k]:.0f}",
+                ha="center", va="bottom", fontweight="bold", fontsize=9.5,
+                color="white", zorder=4)
     a2.set_ylabel("median days on market"); a2.set_ylim(0, top)
     a2.axhline(avg_age, color=AVG, lw=1.3, ls="--", zorder=2)
     a2.set_title("(b)  Time on market by room count",
