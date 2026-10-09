@@ -160,7 +160,7 @@ def heatmap(dist_df, metric, title, fmt, hi, fname):
 
 
 def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
-                      title_size=13):
+                      title_size=13, label_size=7, tick_size=9.5, legend_title=True):
     """Grouped bars on ax: each district, one bar per month-long period.
 
     Bars are monthly FLOWS, so each is labelled by its period (e.g. Jun-Jul),
@@ -184,15 +184,18 @@ def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
         ax.bar(x + off, vals, w, color=c, label=per)
         for xi, v in zip(x + off, vals):
             if np.isfinite(v):
-                ax.text(xi, v + np.nanmax(piv.values) * 0.012, lab(v),
-                        ha="center", fontsize=7, color=INK)
-    ax.set_xticks(x); ax.set_xticklabels(dists, rotation=32, ha="right", fontsize=9.5)
+                ax.annotate(lab(v), (xi, v), xytext=(0, 2), textcoords="offset points",
+                            ha="center", va="bottom", fontsize=label_size, color=INK)
+    ax.set_xticks(x); ax.set_xticklabels(dists, rotation=32, ha="right", fontsize=tick_size)
     ax.set_ylabel(ylabel); ax.set_ylim(0, np.nanmax(piv.values) * 1.16)
     if thousands:
         ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v / 1000:.0f}k"))
     ax.set_title(title, fontsize=title_size, fontweight="bold", loc="left")
-    ax.legend(frameon=False, fontsize=10, ncol=len(order), loc="upper right",
-              title="period (24th-to-24th)", title_fontsize=9)
+    if legend_title:
+        ax.legend(frameon=False, fontsize=10, ncol=len(order), loc="upper right",
+                  title="period (24th-to-24th)", title_fontsize=9)
+    else:
+        ax.legend(frameon=False, fontsize=8.5, ncol=len(order), loc="upper right")
 
 
 def multihorizon(dist_df, metric, ylabel, title, fmt, fname, thousands=False):

@@ -18,6 +18,10 @@ on:  # yamllint disable-line rule:truthy
         options: [none, paper, extra, all]
         required: false
         default: none
+      only:
+        description: "Only these paper figure numbers, comma-separated (e.g. 9,11); empty = all"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -57,7 +61,8 @@ jobs:
           TELEGRAM_CHAT: ${{ vars.TELEGRAM_CHAT || '@chart_automation' }}
           TELEGRAM_CHAT_EN: ${{ vars.TELEGRAM_CHAT_EN || '' }}
           POST_WHICH: ${{ inputs.post }}
-        run: python paper_figures.py --post "$POST_WHICH"
+          POST_ONLY: ${{ inputs.only }}
+        run: python paper_figures.py --post "$POST_WHICH" --only "$POST_ONLY"
 
       - name: Upload paper figures
         uses: actions/upload-artifact@v4

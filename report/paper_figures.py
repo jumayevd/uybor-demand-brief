@@ -84,10 +84,11 @@ def main():
     print(f"[paper_figures] {len(PAPER)} paper figures + {len(EXTRA)} extra -> {OUT}")
 
 
-def post(which="paper"):
+def post(which="paper", only=None):
     """Post the built figures to the Telegram channel as a one-off, under a header
     that marks them as frozen paper figures. which: paper (1-12, paper captions),
-    extra (figures outside this draft, e.g. the demand map), or all."""
+    extra (figures outside this draft, e.g. the demand map), or all. only: optional
+    set of paper figure numbers to send (e.g. {9, 11}); default all of them."""
     import send_telegram as ST
     token = os.environ.get(ST.TOKEN_ENV)
     if not token:
@@ -101,7 +102,8 @@ def post(which="paper"):
               f"·  {w['n_listings']:,} apartments  ·  {w['n_obs']:,} listing-days")
     figs = []
     if which in ("paper", "all"):
-        figs += [(stem, f"Figure {n}. {cap}") for n, name, stem, cap in PAPER]
+        figs += [(stem, f"Figure {n}. {cap}") for n, name, stem, cap in PAPER
+                 if not only or n in only]
     if which in ("extra", "all"):
         figs += [(f"Extra_{name[4:]}", cap) for name, cap in EXTRA]
     return ST.deliver(token, chat, OUT, figs, header, os.path.join(OUT, "_png"))
@@ -115,7 +117,13 @@ def pd_date(iso):
 
 if __name__ == "__main__":
     import sys
-    if "--post" in sys.argv:        # --post [paper|extra|all]
+    if "--post" in sys.argv:        # --post [paper|extra|all] [--only 9,11]
         i = sys.argv.index("--post")
-        sys.exit(post(sys.argv[i + 1] if len(sys.argv) > i + 1 else "paper"))
+        which = sys.argv[i + 1] if len(sys.argv) > i + 1 else "paper"
+        only = None
+        if "--only" in sys.argv:
+            j = sys.argv.index("--only")
+            arg = sys.argv[j + 1] if len(sys.argv) > j + 1 else ""
+            only = {int(x) for x in arg.replace(" ", "").split(",") if x}
+        sys.exit(post(which, only))
     main()

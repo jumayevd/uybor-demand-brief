@@ -311,35 +311,42 @@ def build_exit_dims():
 
 def build_tom_dims():
     dd = R["districts"]
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.3),
+    # same layout as the exit figure (Fig 8): vertical district bars, longest first,
+    # one-colour gradient, values above the bars, dashed reference labelled at right
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.2),
                                  gridspec_kw={"width_ratios": [1.7, 1]})
-    order = sorted(dd, key=lambda d: dd[d]["age"])
+    order = sorted(dd, key=lambda d: -dd[d]["age"])
     ages = [dd[d]["age"] for d in order]
     # reference line: city-wide median over ALL active listings (same basis as the
     # room-count bars), not the unweighted mean of the 12 district medians
     avg_age = float(R["stockage_med"])
-    cmap = LinearSegmentedColormap.from_list("p", ["#ece9f2", PURP])
-    nrm = [(a - min(ages)) / (max(ages) - min(ages)) for a in ages]
-    a1.barh(range(len(order)), ages, color=[cmap(0.2 + 0.8 * (1 - v)) for v in nrm],
-            height=0.68)
-    for i, a in enumerate(ages):
-        a1.text(a + 0.6, i, f"{a:.0f}", va="center", fontsize=8, fontweight="bold")
-    a1.set_yticks(range(len(order))); a1.set_yticklabels(order, fontsize=8.4)
-    a1.invert_yaxis()
-    a1.set_xlabel("median time on market (days)"); a1.set_xlim(0, max(ages) * 1.18)
-    a1.axvline(avg_age, color=AVG, lw=1.3, ls="--", label=f"city median: {avg_age:.0f} days")
-    a1.legend(loc="upper right", frameon=False, fontsize=8.5)
-    a1.set_title("(a)  Time on market by district",
-                 fontsize=10.5, fontweight="bold", loc="left")
     ar = {int(k): v for k, v in R["age_rooms"].items()}
     ks3 = sorted(ar)
-    b = a2.bar([f"{k}-rm" for k in ks3], [ar[k] for k in ks3], color=PURP, width=0.62)
+    LBL = dict(fc="white", ec="none", pad=0.8)   # keeps the dashed line off the numbers
+    top = max(max(ages), max(ar.values()), avg_age) * 1.18
+    cmap = LinearSegmentedColormap.from_list("t", ["#d5e6e9", TEAL])
+    nrm = [(a - min(ages)) / (max(ages) - min(ages)) for a in ages]
+    a1.bar(range(len(order)), ages, color=[cmap(0.25 + 0.75 * v) for v in nrm], width=0.66)
+    for i, a in enumerate(ages):
+        a1.annotate(f"{a:.0f}", (i, a), xytext=(0, 3), textcoords="offset points",
+                    ha="center", va="bottom", fontsize=8.4, fontweight="bold",
+                    bbox=LBL, zorder=4)
+    a1.set_xticks(range(len(order)))
+    a1.set_xticklabels(order, rotation=32, ha="right", fontsize=8.4)
+    a1.set_ylabel("median days on market"); a1.set_ylim(0, top)
+    a1.axhline(avg_age, color=AVG, lw=1.3, ls="--", zorder=2)
+    a1.text(len(order) - 0.5, avg_age + top * 0.015, f"city median {avg_age:.0f} days",
+            fontsize=7.8, color=AVG, ha="right", fontweight="bold")
+    a1.set_title("(a)  Time on market by district",
+                 fontsize=10.5, fontweight="bold", loc="left")
+    b = a2.bar([f"{k}-rm" for k in ks3], [ar[k] for k in ks3], color=TEAL, width=0.62)
     for bar, k in zip(b, ks3):
-        a2.text(bar.get_x() + bar.get_width() / 2, ar[k] - 1.2, f"{ar[k]}",
-                ha="center", va="top", color="white", fontweight="bold", fontsize=10)
-    a2.set_ylabel("median days on market"); a2.set_ylim(0, max(max(ar.values()), avg_age) * 1.3)
-    a2.axhline(avg_age, color=AVG, lw=1.3, ls="--", label=f"city median: {avg_age:.0f} days")
-    a2.legend(loc="upper center", frameon=False, fontsize=8.5)
+        a2.annotate(f"{ar[k]:.0f}", (bar.get_x() + bar.get_width() / 2, ar[k]),
+                    xytext=(0, 3), textcoords="offset points",
+                    ha="center", va="bottom", fontweight="bold", fontsize=9.5,
+                    bbox=LBL, zorder=4)
+    a2.set_ylabel("median days on market"); a2.set_ylim(0, top)
+    a2.axhline(avg_age, color=AVG, lw=1.3, ls="--", zorder=2)
     a2.set_title("(b)  Time on market by room count",
                  fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
@@ -661,15 +668,16 @@ def build_dynamics_districts():
     dist = pd.concat([TS.series(P[P.district_en == d], anchors, d)
                       for d in sorted(P.district_en.unique()) if d not in dropped],
                      ignore_index=True)
-    fig, (a1, a2) = plt.subplots(2, 1, figsize=(14, 11))
+    # same width, type sizes and legend style as the other paper figures
+    fig, (a1, a2) = plt.subplots(2, 1, figsize=(11, 8.4))
+    style = dict(title_size=10.5, label_size=6.6, tick_size=8.4, legend_title=False)
     TS.draw_multihorizon(a1, dist, "new_views", "new views in the period",
-                         "(a)  Demand reach by district", "{:,.0f}",
-                         thousands=True, title_size=12)
+                         "(a)  Demand reach by district", "{:,.0f}", thousands=True, **style)
     TS.draw_multihorizon(a2, dist, "ctr_pct", "clicks per 100 new views",
-                         "(b)  Click-through rate by district", "{:.2f}", title_size=12)
+                         "(b)  Click-through rate by district", "{:.2f}", **style)
     if dropped:
         fig.text(0.01, -0.01, f"Not shown: {', '.join(dropped)} (fewer than "
-                 f"{config.MIN_DISTRICT_LISTINGS} listings).", ha="left", fontsize=8, color=GREY)
+                 f"{config.MIN_DISTRICT_LISTINGS} listings).", ha="left", fontsize=7.8, color=GREY)
     plt.tight_layout()
     plt.savefig(out("fig_dynamics_districts.pdf"), bbox_inches="tight")
     plt.close()
