@@ -272,6 +272,8 @@ def metrics(apt, L):
     comp = L.loc[L.exited & L.tom_completed.ge(0), "tom_completed"]
     R["tom_med"] = round(float(comp.median()), 0)
     R["tom_n"] = int(comp.notna().sum())
+    R["tom_p25"] = round(float(comp.quantile(0.25)), 0)
+    R["tom_p75"] = round(float(comp.quantile(0.75)), 0)
     act = apt[apt.snapshot_date == final].copy()
     act["age"] = (act.snapshot_date - act.posted_at).dt.days
     act["rn"] = pd.to_numeric(act.rooms, errors="coerce")
@@ -343,8 +345,14 @@ def metrics(apt, L):
                      clicks=int(ld.nc.sum()), favs=int(ld.nf.sum()),
                      nlist=int(len(ld)),
                      clicka=round(float((ld.nc > 0).mean() * 100), 1),
-                     fava=round(float((ld.nf > 0).mean() * 100), 1))
+                     fava=round(float((ld.nf > 0).mean() * 100), 1),
+                     # market tightness (Eq. 3): new views per active listing-day
+                     tight=round(float(ld.nv.sum() / ld.days_obs.sum()), 2),
+                     nact=int((act.district_en == d).sum()),   # stock at final snapshot
+                     # share of that stock posted in the last 14 days (fresh supply)
+                     new14=round(float((act[act.district_en == d].age < 14).mean() * 100), 1))
     R["districts"] = dd
+    R["tightness_city"] = round(float(L.nv.sum() / L.days_obs.sum()), 2)
 
     # district view-velocity PERCENTILE (map color) + median coordinates (map position)
     L["vpct"] = L.vpd.rank(pct=True) * 100
