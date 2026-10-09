@@ -96,10 +96,14 @@ def post(which="paper", only=None):
         return 1
     chat = os.environ.get("TELEGRAM_CHAT_EN") or os.environ.get(ST.CHAT_ENV, ST.DEFAULT_CHAT)
     w = json.load(open(os.path.join(OUT, "metrics.json"), encoding="utf-8"))["window"]
-    end = w["date_max"]
-    header = ("📄 *Working-paper figures — data to "
-              f"{pd_date(end)}*\n{w['date_min']} → {end}  ·  {w['n_days']} days  "
-              f"·  {w['n_listings']:,} apartments  ·  {w['n_obs']:,} listing-days")
+    # the first snapshot (~01:00 Tashkent the next day) opens the window, so the
+    # period covered starts the day after it: 30 Jun -> 30 Sep reads 1 Jul - 30 Sep
+    import datetime as _dt
+    first = (_dt.date.fromisoformat(w["date_min"]) + _dt.timedelta(days=1)).isoformat()
+    header = ("📄 *Working-paper figures — "
+              f"{pd_date(first)} to {pd_date(w['date_max'])}*\n"
+              f"{w['n_days']} daily snapshots  ·  {w['n_listings']:,} apartments  "
+              f"·  {w['n_obs']:,} listing-days")
     figs = []
     if which in ("paper", "all"):
         figs += [(stem, f"Figure {n}. {cap}") for n, name, stem, cap in PAPER
