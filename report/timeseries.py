@@ -160,7 +160,8 @@ def heatmap(dist_df, metric, title, fmt, hi, fname):
 
 
 def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
-                      title_size=13, label_size=7, tick_size=9.5, legend_title=True):
+                      title_size=13, label_size=7, tick_size=9.5, legend_title=True,
+                      palette=None):
     """Grouped bars on ax: each district, one bar per month-long period.
 
     Bars are monthly FLOWS, so each is labelled by its period (e.g. Jun-Jul),
@@ -177,7 +178,7 @@ def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
     piv = d.pivot(index="scope", columns="period", values=metric)[order]
     piv = piv.sort_values(order[-1], ascending=False)
     dists = list(piv.index); x = np.arange(len(dists)); w = 0.8 / len(order)
-    palette = [GOLD, TEAL, RUST, PURP][:len(order)]
+    palette = (palette or [GOLD, TEAL, RUST, PURP])[:len(order)]
     for k, (per, c) in enumerate(zip(order, palette)):
         vals = piv[per].to_numpy(float)
         off = (k - (len(order) - 1) / 2) * w

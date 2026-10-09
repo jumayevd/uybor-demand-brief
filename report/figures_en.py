@@ -669,7 +669,9 @@ def build_dynamics_districts():
                      ignore_index=True)
     # same width, type sizes and legend style as the other paper figures
     fig, (a1, a2) = plt.subplots(2, 1, figsize=(11, 8.4))
-    style = dict(title_size=10.5, label_size=6.6, tick_size=8.4, legend_title=False)
+    # one hue, light -> dark in time order (as the single-colour gradients of Figs 8-9)
+    style = dict(title_size=10.5, label_size=6.6, tick_size=8.4, legend_title=False,
+                 palette=["#a9cdd3", "#5c9ca6", "#1d5f6b"])
     TS.draw_multihorizon(a1, dist, "new_views", "new views in the period",
                          "(a)  Demand reach by district", "{:,.0f}", thousands=True, **style)
     TS.draw_multihorizon(a2, dist, "ctr_pct", "clicks per 100 new views",
