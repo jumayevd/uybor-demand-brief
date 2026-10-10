@@ -742,7 +742,7 @@ def build_demand_supply_monthly():
                                               demand=("demand", "sum"))
     M["ratio"] = M.demand / M.ld * 1000
     labels = [p.strftime("%B") for p in M.index]
-    cols = ["#a9cdd3", "#5c9ca6", "#1d5f6b"][:len(M)]      # light -> dark in time
+    x = np.arange(len(M))
     fig, axs = plt.subplots(1, 3, figsize=(11, 3.9))
     panels = [("supply", "(a)  Supply", "active listings (daily average)", "{:,.0f}"),
               ("demand", "(b)  Demand", "clicks + saves in the month", "{:,.0f}"),
@@ -750,12 +750,14 @@ def build_demand_supply_monthly():
                "{:.1f}")]
     for ax, (col, title, ylab, fmt) in zip(axs, panels):
         vals = M[col].to_numpy(float)
-        b = ax.bar(labels, vals, color=cols, width=0.6)
-        for bar, v in zip(b, vals):
-            ax.annotate(fmt.format(v), (bar.get_x() + bar.get_width() / 2, v),
-                        xytext=(0, 3), textcoords="offset points", ha="center",
-                        va="bottom", fontsize=10, fontweight="bold", color=INK)
-        ax.set_ylim(0, vals.max() * 1.18)
+        ax.plot(x, vals, color=TEAL, lw=2.2, marker="o", ms=8,
+                markeredgecolor="white", markeredgewidth=1.5, zorder=3)
+        for xi, v in zip(x, vals):
+            ax.annotate(fmt.format(v), (xi, v), xytext=(0, 9), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=10, fontweight="bold", color=INK)
+        ax.set_xticks(x); ax.set_xticklabels(labels)
+        ax.set_xlim(-0.4, len(M) - 0.6)
+        ax.set_ylim(0, vals.max() * 1.25)
         ax.set_ylabel(ylab, fontsize=9)
         ax.set_title(title, fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
