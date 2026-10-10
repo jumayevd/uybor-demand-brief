@@ -727,77 +727,43 @@ def daily_demand_supply():
     return D
 
 
-def build_demand_supply_daily():
-    """Extra — demand (clicks + saves), supply (active listings) and the
-    demand/supply ratio, day by day, with calendar-month averages."""
+def build_demand_supply_monthly():
+    """Extra — supply, demand and the demand/supply ratio by calendar month.
+
+    Supply  = average number of active listings per day in the month.
+    Demand  = clicks + saves made in the month.
+    Ratio   = demand per 1,000 active listing-days (ratio of sums, as Eq. 3), so
+              months of different length compare fairly.
+    Daily values come from daily_demand_supply() (gap-spread, no scrape artefacts).
+    """
     D = daily_demand_supply()
-    months = D.index.to_period("M")
-    M = D.groupby(months).agg(supply=("supply", "mean"), demand=("demand", "mean"),
-                              clicks=("clicks", "mean"), saves=("saves", "mean"),
-                              ls=("supply", "sum"), dm=("demand", "sum"))
-    M["ratio"] = M.dm / M.ls * 1000          # ratio of sums over the month (as Eq. 3)
-    roll = D.rolling(7, center=True, min_periods=4).mean()
-    fig, (a1, a2, a3) = plt.subplots(3, 1, figsize=(11, 9.4), sharex=True)
-    DARK = "#1d5f6b"
-
-    def months_guides(ax, top, label):
-        """Dotted month boundaries; each month headed by its name and average."""
-        for p in M.index:
-            t0 = max(p.start_time, D.index.min())
-            t1 = min(p.end_time.normalize(), D.index.max())    # centre on the data shown
-            ax.axvline(p.start_time, color=GREY, lw=0.8, ls=":", zorder=0)
-            ax.text(t0 + (t1 - t0) / 2, top, f"{p.strftime('%B')}:  {label(M.loc[p])}",
-                    ha="center", va="top", fontsize=8.6, color=AVG, fontweight="bold")
-
-    def month_steps(ax, col):
-        for p, v in M[col].items():
-            ax.hlines(v, p.start_time, p.end_time.normalize(), color=GOLD, lw=2.2, zorder=3)
-
-    # (a) supply
-    top = D.supply.max() * 1.22
-    a1.plot(D.index, D.supply, color=TEAL, lw=2)
-    month_steps(a1, "supply")
-    a1.set_ylim(0, top)
-    months_guides(a1, top * 0.97, lambda r: f"average {r.supply:,.0f}")
-    a1.set_ylabel("active listings")
-    a1.set_title("(a)  Supply: active listings per day (gold: monthly average)",
-                 fontsize=10.5, fontweight="bold", loc="left")
-    # (b) demand
-    top = D.clicks.max() * 1.25
-    a2.plot(D.index, D.clicks, color=TEAL, lw=0.8, alpha=0.35)
-    a2.plot(D.index, D.saves, color=GOLD, lw=0.8, alpha=0.45)
-    a2.plot(roll.index, roll.clicks, color=TEAL, lw=2, label="clicks")
-    a2.plot(roll.index, roll.saves, color=GOLD, lw=2, label="saves")
-    a2.set_ylim(0, top); a2.set_ylabel("per day")
-    months_guides(a2, top * 0.97,
-                  lambda r: f"{r.clicks:.1f} clicks, {r.saves:.1f} saves a day")
-    a2.legend(frameon=False, fontsize=8.5, ncol=2, loc="upper right",
-              bbox_to_anchor=(1, 0.86))
-    a2.set_title("(b)  Demand: clicks and saves per day (thin: daily; bold: 7-day average)",
-                 fontsize=10.5, fontweight="bold", loc="left")
-    # (c) ratio
-    top = D.ratio.max() * 1.25
-    a3.plot(D.index, D.ratio, color=TEAL, lw=0.8, alpha=0.35)
-    a3.plot(roll.index, roll.ratio, color=DARK, lw=2, label="7-day average")
-    month_steps(a3, "ratio")
-    a3.set_ylim(0, top); a3.set_ylabel("per 1,000 active listings")
-    months_guides(a3, top * 0.97, lambda r: f"average {r.ratio:.1f}")
-    a3.legend(handles=[plt.Line2D([], [], color=DARK, lw=2, label="7-day average"),
-                       plt.Line2D([], [], color=GOLD, lw=2.2, label="monthly average")],
-              frameon=False, fontsize=8.5, ncol=2, loc="upper right",
-              bbox_to_anchor=(1, 0.86))
-    a3.set_title("(c)  Demand / supply: clicks + saves per 1,000 active listings per day",
-                 fontsize=10.5, fontweight="bold", loc="left")
-    import matplotlib.dates as mdates
-    a3.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO))
-    a3.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
-    a3.set_xlim(D.index.min() - pd.Timedelta(days=1), D.index.max() + pd.Timedelta(days=1))
-    plt.setp(a3.get_xticklabels(), fontsize=8.4)
+    M = D.groupby(D.index.to_period("M")).agg(supply=("supply", "mean"),
+                                              ld=("supply", "sum"),
+                                              demand=("demand", "sum"))
+    M["ratio"] = M.demand / M.ld * 1000
+    labels = [p.strftime("%B") for p in M.index]
+    cols = ["#a9cdd3", "#5c9ca6", "#1d5f6b"][:len(M)]      # light -> dark in time
+    fig, axs = plt.subplots(1, 3, figsize=(11, 3.9))
+    panels = [("supply", "(a)  Supply", "active listings (daily average)", "{:,.0f}"),
+              ("demand", "(b)  Demand", "clicks + saves in the month", "{:,.0f}"),
+              ("ratio", "(c)  Demand / supply", "clicks + saves per 1,000 listings a day",
+               "{:.1f}")]
+    for ax, (col, title, ylab, fmt) in zip(axs, panels):
+        vals = M[col].to_numpy(float)
+        b = ax.bar(labels, vals, color=cols, width=0.6)
+        for bar, v in zip(b, vals):
+            ax.annotate(fmt.format(v), (bar.get_x() + bar.get_width() / 2, v),
+                        xytext=(0, 3), textcoords="offset points", ha="center",
+                        va="bottom", fontsize=10, fontweight="bold", color=INK)
+        ax.set_ylim(0, vals.max() * 1.18)
+        ax.set_ylabel(ylab, fontsize=9)
+        ax.set_title(title, fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
-    plt.savefig(out("fig_demand_supply_daily.pdf"), bbox_inches="tight")
+    plt.savefig(out("fig_demand_supply_monthly.pdf"), bbox_inches="tight")
     plt.close()
-    print("  fig_demand_supply_daily.pdf  monthly:",
-          {str(p): (round(r.supply), round(r.demand, 1), round(r.ratio, 2)) for p, r in M.iterrows()})
+    print("  fig_demand_supply_monthly.pdf",
+          {l: (round(r.supply), int(round(r.demand)), round(r.ratio, 1))
+           for l, (_, r) in zip(labels, M.iterrows())})
 
 
 ALL_FIGURES = [
@@ -815,7 +781,7 @@ ALL_FIGURES = [
     build_tightness_districts,
     build_hedonic_results,
     build_dynamics_districts,
-    build_demand_supply_daily,
+    build_demand_supply_monthly,
 ]
 
 

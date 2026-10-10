@@ -50,9 +50,8 @@ PAPER = [
     (13, "fig_tightness_districts", "Figure12_tightness_districts", "Market tightness across districts"),
 ]
 EXTRA = [    # (figure file, caption) for figures built but not in the current draft
-    ("fig_demand_supply_daily",
-     "Demand (clicks and saves), supply (active listings) and the demand/supply ratio, "
-     "day by day, with calendar-month averages"),
+    ("fig_demand_supply_monthly",
+     "Supply, demand and the demand/supply ratio by month"),
 ]
 
 
