@@ -49,7 +49,11 @@ PAPER = [
      "Distribution of demand and supply across price segments"),
     (13, "fig_tightness_districts", "Figure12_tightness_districts", "Market tightness across districts"),
 ]
-EXTRA = []   # (figure file, caption) for figures built but not in the current draft
+EXTRA = [    # (figure file, caption) for figures built but not in the current draft
+    ("fig_demand_supply_daily",
+     "Demand (clicks and saves), supply (active listings) and the demand/supply ratio, "
+     "day by day, with calendar-month averages"),
+]
 
 
 def export(src_pdf, stem):
@@ -96,7 +100,7 @@ def post(which="paper", only=None):
         return 1
     chat = os.environ.get("TELEGRAM_CHAT_EN") or os.environ.get(ST.CHAT_ENV, ST.DEFAULT_CHAT)
     w = json.load(open(os.path.join(OUT, "metrics.json"), encoding="utf-8"))["window"]
-    # the first snapshot (~01:00 Tashkent the next day) opens the window, so the
+    # the first snapshot (~01:00-04:00 Tashkent the next day) opens the window, so the
     # period covered starts the day after it: 30 Jun -> 30 Sep reads 1 Jul - 30 Sep
     import datetime as _dt
     first = (_dt.date.fromisoformat(w["date_min"]) + _dt.timedelta(days=1)).isoformat()

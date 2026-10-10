@@ -49,7 +49,7 @@ def cut_to_end(df):
     within [start, end], both inclusive (used to freeze the paper's figures at a
     fixed window). Unset = all data.
 
-    Snapshots are taken at ~20:00 UTC (~01:00 Tashkent the next day), so the
+    Snapshots are taken in the early hours of the next day (~01:00-04:00 Tashkent), so the
     snapshot dated 30 Jun opens Tashkent 1 July and the one dated 30 Sep closes
     30 September: PANEL_START=2026-06-30, PANEL_END=2026-09-30 is Q3 2026."""
     start, end = os.environ.get("PANEL_START"), os.environ.get("PANEL_END")

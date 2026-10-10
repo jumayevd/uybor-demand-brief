@@ -4,7 +4,7 @@ timeseries.py — monthly, district-wise demand trends (calendar months).
 ======================================================================
 
 Anchors the panel at month ends: snapshots dated 30 Jun -> 31 Jul -> 31 Aug ->
-30 Sep = July, August, September (Q3 2026). Snapshots are taken at ~01:00
+30 Sep = July, August, September (Q3 2026). Snapshots are taken at ~01:00-04:00
 Tashkent the day after their date, so each anchor closes its calendar month. For each
 month and district (plus an OVERALL row) it reports both the LEVEL at the anchor
 and the FLOW over the month, so the trend in views / velocity / clicks / saves
