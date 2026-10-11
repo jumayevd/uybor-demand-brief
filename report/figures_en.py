@@ -772,112 +772,52 @@ def build_demand_supply_monthly():
            for l, (_, r) in zip(labels, M.iterrows())})
 
 
-def _free_label_spot(ax, xi, v, text, lines, fs=8):
-    """Pick a label position (above, below, right, left of the point) whose box
-    touches no plotted line and stays inside the axes. Sizes are measured from the
-    axes' real extent, so the check is in true points. Returns (offset, ha, va, free)."""
-    fig = ax.figure
-    bb = ax.get_position()
-    wpt = bb.width * fig.get_figwidth() * 72
-    hpt = bb.height * fig.get_figheight() * 72
-    x_lo, x_hi = ax.get_xlim(); y_lo, y_hi = ax.get_ylim()
-    sx = (x_hi - x_lo) / wpt; sy = (y_hi - y_lo) / hpt        # data units per point
-    tw, th, pad = 0.64 * fs * len(text) * sx, 1.15 * fs * sy, 2
-    up, dn, side = 7, 8, 9
-    cands = [((0, up), "center", "bottom",
-              (xi - tw / 2, xi + tw / 2, v + (up - pad) * sy, v + up * sy + th)),
-             ((0, -dn), "center", "top",
-              (xi - tw / 2, xi + tw / 2, v - dn * sy - th, v - (dn - pad) * sy)),
-             ((side, 0), "left", "center",
-              (xi + (side - pad) * sx, xi + side * sx + tw, v - th / 2, v + th / 2)),
-             ((-side, 0), "right", "center",
-              (xi - side * sx - tw, xi - (side - pad) * sx, v - th / 2, v + th / 2))]
-    def hits(box):
-        x0, x1, y0, y1 = box
-        n = 0 if (y0 >= y_lo and y1 <= y_hi and x0 >= x_lo and x1 <= x_hi) else 999
-        for lx, ly in lines:
-            for k in range(len(lx) - 1):
-                t = np.linspace(0, 1, 200)
-                px = lx[k] + (lx[k + 1] - lx[k]) * t
-                py = ly[k] + (ly[k + 1] - ly[k]) * t
-                n += int(((px > x0) & (px < x1) & (py > y0) & (py < y1)).sum())
-        return n
-    scored = [(hits(c[3]), i, c) for i, c in enumerate(cands)]
-    n, _, best = min(scored)                      # first free spot wins ties
-    return best[0], best[1], best[2], n == 0
-
-
-def build_intent_supply_districts(kind):
-    """Extra — clicks (kind="clicks") or saves (kind="saves") per 1,000 active
-    listings a day, by district and calendar month (ratio of monthly sums), as
-    small multiples on a shared scale; the city line is repeated in grey."""
+def build_intent_supply_districts():
+    """Extra — (a) clicks and (b) saves per 1,000 active listings a day, by district
+    and calendar month (ratio of monthly sums), as grouped bars in the style of the
+    dynamics figure; Tashkent as a whole is the first group."""
     D = daily_demand_supply(by_district=True).reset_index()
     D["month"] = D.day.dt.to_period("M")
     dropped = sorted(k for k, v in R["districts"].items()
                      if v["nlist"] < config.MIN_DISTRICT_LISTINGS)
     D = D[~D.district_en.isin(dropped)]
-    def ratio(g):
-        return g[kind].sum() / g.supply.sum() * 1000
-    city = D.groupby("month").apply(ratio)
-    dist = D.groupby(["district_en", "month"]).apply(ratio).unstack("month")
-    q3 = D.groupby("district_en").apply(ratio).sort_values(ascending=False)
-    months = list(city.index); x = np.arange(len(months))
-    mlab = [p.strftime("%b") for p in months]
-    top = max(dist.to_numpy().max(), city.max()) * 1.3
-    fmt = "{:.1f}"
-    names = ["Tashkent"] + list(q3.index)
-    ncol = 4; nrow = int(np.ceil(len(names) / ncol))
-    fig, axs = plt.subplots(nrow, ncol, figsize=(11, 2.55 * nrow), sharex=True, sharey=True)
-    labels = []
-    for ax, name in zip(axs.ravel(), names):
-        vals = (city if name == "Tashkent" else dist.loc[name]).to_numpy(float)
-        if name != "Tashkent":
-            ax.plot(x, city.to_numpy(float), color=GREY, lw=1.3, ls="--", zorder=2)
-        col = "#1d5f6b" if name == "Tashkent" else TEAL
-        ax.plot(x, vals, color=col, lw=2.2, marker="o", ms=7, markeredgecolor="white",
-                markeredgewidth=1.3, zorder=3)
-        ax.set_xlim(-0.35, len(x) - 0.65); ax.set_ylim(0, top)
-        lines = [(x, vals)] + ([] if name == "Tashkent" else [(x, city.to_numpy(float))])
-        labels.append((ax, x, vals, lines))
-        if name == "Tashkent":
-            n = sum(v["nlist"] for k, v in R["districts"].items() if k not in dropped)
-        else:
-            n = R["districts"][name]["nlist"]
-        ax.set_title(f"{name}  ({n:,} listings)", fontsize=9.5, fontweight="bold", loc="left")
-        ax.set_xticks(x); ax.set_xticklabels(mlab, fontsize=8.5)
-        ax.tick_params(axis="y", labelsize=8)
-    for ax in axs.ravel()[len(names):]:
-        ax.set_visible(False)
-    for r in range(nrow):
-        axs[r, 0].set_ylabel(f"{kind} per 1,000\nlistings a day", fontsize=8.5)
-    note = "Grey dashed line: Tashkent. Districts ordered by their Q3 value."
-    if kind == "saves":
-        note += " Saves are rare, so district values rest on small counts."
+    months = sorted(D.month.unique())
+    cols = ["#a9cdd3", "#5c9ca6", "#1d5f6b"][:len(months)]   # light -> dark in time
+    fig, axes = plt.subplots(2, 1, figsize=(11, 8.4))
+    for ax, kind, title in [(axes[0], "clicks", "(a)  Clicks per 1,000 active listings a day"),
+                            (axes[1], "saves", "(b)  Saves per 1,000 active listings a day")]:
+        def ratio(g):
+            return g[kind].sum() / g.supply.sum() * 1000
+        city = D.groupby("month").apply(ratio)
+        dist = D.groupby(["district_en", "month"]).apply(ratio).unstack("month")
+        order = list(D.groupby("district_en").apply(ratio).sort_values(ascending=False).index)
+        tab = pd.concat([city.to_frame("Tashkent").T, dist.loc[order]])
+        x = np.arange(len(tab)).astype(float)
+        x[1:] += 0.5                                     # gap after the city group
+        w = 0.8 / len(months)
+        top = np.nanmax(tab.to_numpy()) * 1.15
+        for k, (m, c) in enumerate(zip(months, cols)):
+            vals = tab[m].to_numpy(float)
+            xs = x + (k - (len(months) - 1) / 2) * w
+            ax.bar(xs, vals, w, color=c, label=m.strftime("%B"))
+            for xi, v in zip(xs, vals):
+                ax.annotate(f"{v:.1f}", (xi, v), xytext=(0, 2), textcoords="offset points",
+                            ha="center", va="bottom", fontsize=6.6, color=INK)
+        ax.set_xticks(x)
+        ax.set_xticklabels(tab.index, rotation=32, ha="right", fontsize=8.4)
+        ax.get_xticklabels()[0].set_fontweight("bold")
+        ax.set_ylim(0, top)
+        ax.set_ylabel(f"{kind} per 1,000 listings a day", fontsize=9)
+        ax.set_title(title, fontsize=10.5, fontweight="bold", loc="left")
+        ax.legend(frameon=False, fontsize=8.5, ncol=len(months), loc="upper right")
+    note = "Districts ordered by their Q3 value. Saves are rare, so district values rest on small counts."
     if dropped:
         note += f" Not shown: {', '.join(dropped)} (fewer than {config.MIN_DISTRICT_LISTINGS} listings)."
     fig.text(0.01, -0.01, note, ha="left", fontsize=7.8, color=GREY)
     plt.tight_layout()
-    # place value labels once the layout is final, so the free-spot check is exact
-    import matplotlib.patheffects as pe
-    halo = [pe.withStroke(linewidth=3, foreground="white")]
-    for ax, xs, vals, lines in labels:
-        for xi, v in zip(xs, vals):
-            off, ha, va, free = _free_label_spot(ax, xi, v, fmt.format(v), lines)
-            ax.annotate(fmt.format(v), (xi, v), xytext=off, textcoords="offset points",
-                        ha=ha, va=va, fontsize=8, fontweight="bold", color=INK, zorder=4,
-                        path_effects=None if free else halo)
-    name = f"fig_{kind}_supply_districts.pdf"
-    plt.savefig(out(name), bbox_inches="tight")
+    plt.savefig(out("fig_intent_supply_districts.pdf"), bbox_inches="tight")
     plt.close()
-    print(f"  {name}  city:", [round(v, 2) for v in city])
-
-
-def build_clicks_supply_districts():
-    build_intent_supply_districts("clicks")
-
-
-def build_saves_supply_districts():
-    build_intent_supply_districts("saves")
+    print("  fig_intent_supply_districts.pdf")
 
 
 ALL_FIGURES = [
@@ -896,8 +836,7 @@ ALL_FIGURES = [
     build_hedonic_results,
     build_dynamics_districts,
     build_demand_supply_monthly,
-    build_clicks_supply_districts,
-    build_saves_supply_districts,
+    build_intent_supply_districts,
 ]
 
 
