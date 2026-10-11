@@ -772,6 +772,31 @@ def build_demand_supply_monthly():
            for l, (_, r) in zip(labels, M.iterrows())})
 
 
+def _free_label_spot(xi, v, text, lines, nx, top):
+    """Pick a label position (above, below, right, left of the point) whose box
+    touches no plotted line and stays inside the panel. Boxes are approximated in
+    data units for the small-multiple panels (x span = nx - 0.3, y span = top)."""
+    h = 0.085 * top                       # label height (8 pt text in a ~2.2 in panel)
+    w = 0.085 * len(text) * (nx - 0.3) / 2.3
+    gap_y, gap_x = 0.045 * top, 0.06
+    cands = [((0, 7), "center", "bottom", (xi - w / 2, xi + w / 2, v + gap_y, v + gap_y + h)),
+             ((0, -8), "center", "top", (xi - w / 2, xi + w / 2, v - gap_y - h, v - gap_y)),
+             ((9, 0), "left", "center", (xi + gap_x, xi + gap_x + w, v - h / 2, v + h / 2)),
+             ((-9, 0), "right", "center", (xi - gap_x - w, xi - gap_x, v - h / 2, v + h / 2))]
+    def hits(box):
+        x0, x1, y0, y1 = box
+        n = 0 if (y0 >= 0 and y1 <= top and x0 >= -0.35 and x1 <= nx - 0.65) else 99
+        for lx, ly in lines:
+            for k in range(len(lx) - 1):
+                t = np.linspace(0, 1, 40)
+                px = lx[k] + (lx[k + 1] - lx[k]) * t
+                py = ly[k] + (ly[k + 1] - ly[k]) * t
+                n += int(((px > x0) & (px < x1) & (py > y0) & (py < y1)).sum())
+        return n
+    best = min(cands, key=lambda c: hits(c[3]))      # first free spot wins ties
+    return best[0], best[1], best[2]
+
+
 def build_intent_supply_districts(kind):
     """Extra — clicks (kind="clicks") or saves (kind="saves") per 1,000 active
     listings a day, by district and calendar month (ratio of monthly sums), as
@@ -800,19 +825,9 @@ def build_intent_supply_districts(kind):
         col = "#1d5f6b" if name == "Tashkent" else TEAL
         ax.plot(x, vals, color=col, lw=2.2, marker="o", ms=7, markeredgecolor="white",
                 markeredgewidth=1.3, zorder=3)
-        cv = city.to_numpy(float)
-        for xi, v, c in zip(x, vals, cv):
-            # label above the point; below it if the city line is just above; beside it
-            # if there is no room below either - so labels never cross a line or the axis
-            clash = name != "Tashkent" and 0 < c - v < 0.18 * top
-            if not clash:
-                off, ha, va = (0, 7), "center", "bottom"
-            elif v > 0.14 * top:
-                off, ha, va = (0, -8), "center", "top"
-            elif xi < len(x) - 1:
-                off, ha, va = (9, 0), "left", "center"
-            else:
-                off, ha, va = (-9, 0), "right", "center"
+        lines = [(x, vals)] + ([] if name == "Tashkent" else [(x, city.to_numpy(float))])
+        for xi, v in zip(x, vals):
+            off, ha, va = _free_label_spot(xi, v, fmt.format(v), lines, len(x), top)
             ax.annotate(fmt.format(v), (xi, v), xytext=off, textcoords="offset points",
                         ha=ha, va=va, fontsize=8, fontweight="bold", color=INK, zorder=4)
         if name == "Tashkent":
