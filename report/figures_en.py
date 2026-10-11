@@ -802,12 +802,19 @@ def build_intent_supply_districts(kind):
                 markeredgewidth=1.3, zorder=3)
         cv = city.to_numpy(float)
         for xi, v, c in zip(x, vals, cv):
-            # label on the side of the point away from the city line, so it never crosses
-            below = name != "Tashkent" and 0 < c - v < 0.18 * top
-            ax.annotate(fmt.format(v), (xi, v), xytext=(0, -8 if below else 7),
-                        textcoords="offset points", ha="center",
-                        va="top" if below else "bottom", fontsize=8, fontweight="bold",
-                        color=INK, zorder=4)
+            # label above the point; below it if the city line is just above; beside it
+            # if there is no room below either - so labels never cross a line or the axis
+            clash = name != "Tashkent" and 0 < c - v < 0.18 * top
+            if not clash:
+                off, ha, va = (0, 7), "center", "bottom"
+            elif v > 0.14 * top:
+                off, ha, va = (0, -8), "center", "top"
+            elif xi < len(x) - 1:
+                off, ha, va = (9, 0), "left", "center"
+            else:
+                off, ha, va = (-9, 0), "right", "center"
+            ax.annotate(fmt.format(v), (xi, v), xytext=off, textcoords="offset points",
+                        ha=ha, va=va, fontsize=8, fontweight="bold", color=INK, zorder=4)
         if name == "Tashkent":
             n = sum(v["nlist"] for k, v in R["districts"].items() if k not in dropped)
         else:
