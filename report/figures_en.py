@@ -689,7 +689,7 @@ def build_dynamics_districts():
 MAX_GAP_DAYS = 7   # longer absences = off the market, not a missed scrape
 
 
-def daily_demand_supply():
+def daily_demand_supply(by_district=False):
     """Daily supply, demand and their ratio over the panel window.
 
     Day t is the interval between the snapshots dated t-1 and t (each snapshot is
@@ -701,24 +701,28 @@ def daily_demand_supply():
     Increments after an absence longer than MAX_GAP_DAYS are booked on the day the
     listing reappears, so daily clicks and saves add up to the panel totals.
 
-    Returns a DataFrame indexed by day: supply (active listings), clicks, saves,
-    demand (= clicks + saves) and ratio (demand per 1,000 active listings).
+    Returns a DataFrame indexed by day (by_district=True: by day and district,
+    using each listing's first-observed district): supply (active listings),
+    clicks, saves, demand (= clicks + saves) and ratio (demand per 1,000 active
+    listings).
     """
     s = P.sort_values(["listing_id", "snapshot_date"])[
-        ["listing_id", "snapshot_date", "clicks", "favorites"]].copy()
+        ["listing_id", "snapshot_date", "district_en", "clicks", "favorites"]].copy()
+    keys = ["day", "district_en"] if by_district else ["day"]
     g = s.groupby("listing_id")
     s["gap"] = g.snapshot_date.diff().dt.days
     s["dc"] = g.clicks.diff().clip(lower=0)
     s["df"] = g.favorites.diff().clip(lower=0)
     # a listing back after a longer absence was off the market meanwhile: its
     # increments are booked on the day it reappears, with no supply for the gap
-    late = s[s.gap > MAX_GAP_DAYS].groupby("snapshot_date")[["dc", "df"]].sum()
+    late = (s[s.gap > MAX_GAP_DAYS].rename(columns={"snapshot_date": "day"})
+            .groupby(keys)[["dc", "df"]].sum())
     s = s[s.gap.between(1, MAX_GAP_DAYS)].reset_index(drop=True)
     rep = s.loc[s.index.repeat(s.gap.astype(int))]
     back = rep.groupby(level=0).cumcount()                    # 0 .. gap-1
     rep = rep.assign(day=rep.snapshot_date - pd.to_timedelta(back, unit="D"),
                      c=rep.dc / rep.gap, f=rep.df / rep.gap)
-    D = rep.groupby("day").agg(supply=("listing_id", "size"),
+    D = rep.groupby(keys).agg(supply=("listing_id", "size"),
                                clicks=("c", "sum"), saves=("f", "sum"))
     D["clicks"] = D.clicks.add(late.dc, fill_value=0).reindex(D.index)
     D["saves"] = D.saves.add(late.df, fill_value=0).reindex(D.index)
@@ -768,6 +772,71 @@ def build_demand_supply_monthly():
            for l, (_, r) in zip(labels, M.iterrows())})
 
 
+def build_intent_supply_districts(kind):
+    """Extra — clicks (kind="clicks") or saves (kind="saves") per 1,000 active
+    listings a day, by district and calendar month (ratio of monthly sums), as
+    small multiples on a shared scale; the city line is repeated in grey."""
+    D = daily_demand_supply(by_district=True).reset_index()
+    D["month"] = D.day.dt.to_period("M")
+    dropped = sorted(k for k, v in R["districts"].items()
+                     if v["nlist"] < config.MIN_DISTRICT_LISTINGS)
+    D = D[~D.district_en.isin(dropped)]
+    def ratio(g):
+        return g[kind].sum() / g.supply.sum() * 1000
+    city = D.groupby("month").apply(ratio)
+    dist = D.groupby(["district_en", "month"]).apply(ratio).unstack("month")
+    q3 = D.groupby("district_en").apply(ratio).sort_values(ascending=False)
+    months = list(city.index); x = np.arange(len(months))
+    mlab = [p.strftime("%b") for p in months]
+    top = max(dist.to_numpy().max(), city.max()) * 1.3
+    fmt = "{:.1f}"
+    names = ["Tashkent"] + list(q3.index)
+    ncol = 4; nrow = int(np.ceil(len(names) / ncol))
+    fig, axs = plt.subplots(nrow, ncol, figsize=(11, 2.55 * nrow), sharex=True, sharey=True)
+    for ax, name in zip(axs.ravel(), names):
+        vals = (city if name == "Tashkent" else dist.loc[name]).to_numpy(float)
+        if name != "Tashkent":
+            ax.plot(x, city.to_numpy(float), color=GREY, lw=1.3, ls="--", zorder=2)
+        col = "#1d5f6b" if name == "Tashkent" else TEAL
+        ax.plot(x, vals, color=col, lw=2.2, marker="o", ms=7, markeredgecolor="white",
+                markeredgewidth=1.3, zorder=3)
+        for xi, v in zip(x, vals):
+            ax.annotate(fmt.format(v), (xi, v), xytext=(0, 7), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=8, fontweight="bold", color=INK)
+        if name == "Tashkent":
+            n = sum(v["nlist"] for k, v in R["districts"].items() if k not in dropped)
+        else:
+            n = R["districts"][name]["nlist"]
+        ax.set_title(f"{name}  ({n:,} listings)", fontsize=9.5, fontweight="bold", loc="left")
+        ax.set_xticks(x); ax.set_xticklabels(mlab, fontsize=8.5)
+        ax.set_xlim(-0.35, len(x) - 0.65); ax.set_ylim(0, top)
+        ax.tick_params(axis="y", labelsize=8)
+    for ax in axs.ravel()[len(names):]:
+        ax.set_visible(False)
+    for r in range(nrow):
+        axs[r, 0].set_ylabel(f"{kind} per 1,000\nlistings a day", fontsize=8.5)
+    note = "Grey dashed line: Tashkent. Districts ordered by their Q3 value."
+    if kind == "saves":
+        note += (f" Saves are rare ({int(round(D.saves.sum())):,} in the window), so district"
+                 " values rest on small counts.")
+    if dropped:
+        note += f" Not shown: {', '.join(dropped)} (fewer than {config.MIN_DISTRICT_LISTINGS} listings)."
+    fig.text(0.01, -0.01, note, ha="left", fontsize=7.8, color=GREY)
+    plt.tight_layout()
+    name = f"fig_{kind}_supply_districts.pdf"
+    plt.savefig(out(name), bbox_inches="tight")
+    plt.close()
+    print(f"  {name}  city:", [round(v, 2) for v in city])
+
+
+def build_clicks_supply_districts():
+    build_intent_supply_districts("clicks")
+
+
+def build_saves_supply_districts():
+    build_intent_supply_districts("saves")
+
+
 ALL_FIGURES = [
     build_concentration_apartments,
     build_s1_dimensions,
@@ -784,6 +853,8 @@ ALL_FIGURES = [
     build_hedonic_results,
     build_dynamics_districts,
     build_demand_supply_monthly,
+    build_clicks_supply_districts,
+    build_saves_supply_districts,
 ]
 
 

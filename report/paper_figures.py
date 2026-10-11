@@ -52,6 +52,10 @@ PAPER = [
 EXTRA = [    # (figure file, caption) for figures built but not in the current draft
     ("fig_demand_supply_monthly",
      "Supply, demand and the demand/supply ratio by month"),
+    ("fig_clicks_supply_districts",
+     "Clicks per 1,000 active listings a day, by district and month"),
+    ("fig_saves_supply_districts",
+     "Saves per 1,000 active listings a day, by district and month"),
 ]
 
 
