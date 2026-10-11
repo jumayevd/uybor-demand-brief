@@ -772,29 +772,39 @@ def build_demand_supply_monthly():
            for l, (_, r) in zip(labels, M.iterrows())})
 
 
-def _free_label_spot(xi, v, text, lines, nx, top):
+def _free_label_spot(ax, xi, v, text, lines, fs=8):
     """Pick a label position (above, below, right, left of the point) whose box
-    touches no plotted line and stays inside the panel. Boxes are approximated in
-    data units for the small-multiple panels (x span = nx - 0.3, y span = top)."""
-    h = 0.085 * top                       # label height (8 pt text in a ~2.2 in panel)
-    w = 0.085 * len(text) * (nx - 0.3) / 2.3
-    gap_y, gap_x = 0.045 * top, 0.06
-    cands = [((0, 7), "center", "bottom", (xi - w / 2, xi + w / 2, v + gap_y, v + gap_y + h)),
-             ((0, -8), "center", "top", (xi - w / 2, xi + w / 2, v - gap_y - h, v - gap_y)),
-             ((9, 0), "left", "center", (xi + gap_x, xi + gap_x + w, v - h / 2, v + h / 2)),
-             ((-9, 0), "right", "center", (xi - gap_x - w, xi - gap_x, v - h / 2, v + h / 2))]
+    touches no plotted line and stays inside the axes. Sizes are measured from the
+    axes' real extent, so the check is in true points. Returns (offset, ha, va, free)."""
+    fig = ax.figure
+    bb = ax.get_position()
+    wpt = bb.width * fig.get_figwidth() * 72
+    hpt = bb.height * fig.get_figheight() * 72
+    x_lo, x_hi = ax.get_xlim(); y_lo, y_hi = ax.get_ylim()
+    sx = (x_hi - x_lo) / wpt; sy = (y_hi - y_lo) / hpt        # data units per point
+    tw, th, pad = 0.64 * fs * len(text) * sx, 1.15 * fs * sy, 2
+    up, dn, side = 7, 8, 9
+    cands = [((0, up), "center", "bottom",
+              (xi - tw / 2, xi + tw / 2, v + (up - pad) * sy, v + up * sy + th)),
+             ((0, -dn), "center", "top",
+              (xi - tw / 2, xi + tw / 2, v - dn * sy - th, v - (dn - pad) * sy)),
+             ((side, 0), "left", "center",
+              (xi + (side - pad) * sx, xi + side * sx + tw, v - th / 2, v + th / 2)),
+             ((-side, 0), "right", "center",
+              (xi - side * sx - tw, xi - (side - pad) * sx, v - th / 2, v + th / 2))]
     def hits(box):
         x0, x1, y0, y1 = box
-        n = 0 if (y0 >= 0 and y1 <= top and x0 >= -0.35 and x1 <= nx - 0.65) else 99
+        n = 0 if (y0 >= y_lo and y1 <= y_hi and x0 >= x_lo and x1 <= x_hi) else 999
         for lx, ly in lines:
             for k in range(len(lx) - 1):
-                t = np.linspace(0, 1, 40)
+                t = np.linspace(0, 1, 200)
                 px = lx[k] + (lx[k + 1] - lx[k]) * t
                 py = ly[k] + (ly[k + 1] - ly[k]) * t
                 n += int(((px > x0) & (px < x1) & (py > y0) & (py < y1)).sum())
         return n
-    best = min(cands, key=lambda c: hits(c[3]))      # first free spot wins ties
-    return best[0], best[1], best[2]
+    scored = [(hits(c[3]), i, c) for i, c in enumerate(cands)]
+    n, _, best = min(scored)                      # first free spot wins ties
+    return best[0], best[1], best[2], n == 0
 
 
 def build_intent_supply_districts(kind):
@@ -818,6 +828,7 @@ def build_intent_supply_districts(kind):
     names = ["Tashkent"] + list(q3.index)
     ncol = 4; nrow = int(np.ceil(len(names) / ncol))
     fig, axs = plt.subplots(nrow, ncol, figsize=(11, 2.55 * nrow), sharex=True, sharey=True)
+    labels = []
     for ax, name in zip(axs.ravel(), names):
         vals = (city if name == "Tashkent" else dist.loc[name]).to_numpy(float)
         if name != "Tashkent":
@@ -825,18 +836,15 @@ def build_intent_supply_districts(kind):
         col = "#1d5f6b" if name == "Tashkent" else TEAL
         ax.plot(x, vals, color=col, lw=2.2, marker="o", ms=7, markeredgecolor="white",
                 markeredgewidth=1.3, zorder=3)
+        ax.set_xlim(-0.35, len(x) - 0.65); ax.set_ylim(0, top)
         lines = [(x, vals)] + ([] if name == "Tashkent" else [(x, city.to_numpy(float))])
-        for xi, v in zip(x, vals):
-            off, ha, va = _free_label_spot(xi, v, fmt.format(v), lines, len(x), top)
-            ax.annotate(fmt.format(v), (xi, v), xytext=off, textcoords="offset points",
-                        ha=ha, va=va, fontsize=8, fontweight="bold", color=INK, zorder=4)
+        labels.append((ax, x, vals, lines))
         if name == "Tashkent":
             n = sum(v["nlist"] for k, v in R["districts"].items() if k not in dropped)
         else:
             n = R["districts"][name]["nlist"]
         ax.set_title(f"{name}  ({n:,} listings)", fontsize=9.5, fontweight="bold", loc="left")
         ax.set_xticks(x); ax.set_xticklabels(mlab, fontsize=8.5)
-        ax.set_xlim(-0.35, len(x) - 0.65); ax.set_ylim(0, top)
         ax.tick_params(axis="y", labelsize=8)
     for ax in axs.ravel()[len(names):]:
         ax.set_visible(False)
@@ -849,6 +857,15 @@ def build_intent_supply_districts(kind):
         note += f" Not shown: {', '.join(dropped)} (fewer than {config.MIN_DISTRICT_LISTINGS} listings)."
     fig.text(0.01, -0.01, note, ha="left", fontsize=7.8, color=GREY)
     plt.tight_layout()
+    # place value labels once the layout is final, so the free-spot check is exact
+    import matplotlib.patheffects as pe
+    halo = [pe.withStroke(linewidth=3, foreground="white")]
+    for ax, xs, vals, lines in labels:
+        for xi, v in zip(xs, vals):
+            off, ha, va, free = _free_label_spot(ax, xi, v, fmt.format(v), lines)
+            ax.annotate(fmt.format(v), (xi, v), xytext=off, textcoords="offset points",
+                        ha=ha, va=va, fontsize=8, fontweight="bold", color=INK, zorder=4,
+                        path_effects=None if free else halo)
     name = f"fig_{kind}_supply_districts.pdf"
     plt.savefig(out(name), bbox_inches="tight")
     plt.close()
