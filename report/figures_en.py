@@ -800,9 +800,14 @@ def build_intent_supply_districts(kind):
         col = "#1d5f6b" if name == "Tashkent" else TEAL
         ax.plot(x, vals, color=col, lw=2.2, marker="o", ms=7, markeredgecolor="white",
                 markeredgewidth=1.3, zorder=3)
-        for xi, v in zip(x, vals):
-            ax.annotate(fmt.format(v), (xi, v), xytext=(0, 7), textcoords="offset points",
-                        ha="center", va="bottom", fontsize=8, fontweight="bold", color=INK)
+        cv = city.to_numpy(float)
+        for xi, v, c in zip(x, vals, cv):
+            # label on the side of the point away from the city line, so it never crosses
+            below = name != "Tashkent" and 0 < c - v < 0.18 * top
+            ax.annotate(fmt.format(v), (xi, v), xytext=(0, -8 if below else 7),
+                        textcoords="offset points", ha="center",
+                        va="top" if below else "bottom", fontsize=8, fontweight="bold",
+                        color=INK, zorder=4)
         if name == "Tashkent":
             n = sum(v["nlist"] for k, v in R["districts"].items() if k not in dropped)
         else:
@@ -817,8 +822,7 @@ def build_intent_supply_districts(kind):
         axs[r, 0].set_ylabel(f"{kind} per 1,000\nlistings a day", fontsize=8.5)
     note = "Grey dashed line: Tashkent. Districts ordered by their Q3 value."
     if kind == "saves":
-        note += (f" Saves are rare ({int(round(D.saves.sum())):,} in the window), so district"
-                 " values rest on small counts.")
+        note += " Saves are rare, so district values rest on small counts."
     if dropped:
         note += f" Not shown: {', '.join(dropped)} (fewer than {config.MIN_DISTRICT_LISTINGS} listings)."
     fig.text(0.01, -0.01, note, ha="left", fontsize=7.8, color=GREY)
