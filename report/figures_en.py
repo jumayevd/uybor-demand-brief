@@ -830,6 +830,141 @@ def build_saves_supply_districts():
     build_intent_supply_districts("saves")
 
 
+def build_intent_rooms():
+    """Fig 6 (paper v22) — purchase intent by number of rooms: % of listings that
+    earned at least one click / save in the window, rooms 1..4 and 5+."""
+    d = L.copy()
+    d["rn"] = pd.to_numeric(d.rooms, errors="coerce")
+    d = d[d.rn >= 1]
+    d["rk"] = d.rn.clip(upper=5).astype(int)
+    g = d.groupby("rk").agg(n=("nc", "size"),
+                            clicka=("nc", lambda s: (s > 0).mean() * 100),
+                            fava=("nf", lambda s: (s > 0).mean() * 100))
+    ks = list(g.index)
+    labels = [f"{k}-room" if k < 5 else "5+ rooms" for k in ks]
+    ca = g.clicka.round(1).tolist(); fa = g.fava.round(1).tolist()
+    x = np.arange(len(ks)); w = 0.38
+    fig, ax = plt.subplots(figsize=(9, 4.4))
+    ax.bar(x - w / 2, ca, w, color=TEAL, label="earned a click")
+    ax.bar(x + w / 2, fa, w, color=GOLD, label="earned a save")
+    for i in range(len(ks)):
+        ax.text(i - w / 2, ca[i] + 0.35, f"{ca[i]:.1f}", ha="center", fontsize=8.6,
+                color=TEAL, fontweight="bold")
+        ax.text(i + w / 2, fa[i] + 0.35, f"{fa[i]:.1f}", ha="center", fontsize=8.6,
+                color=GOLD, fontweight="bold")
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{lab}\n(n = {n:,})" for lab, n in zip(labels, g.n)], fontsize=9)
+    ax.set_ylabel("% of listings"); ax.set_ylim(0, max(max(ca), max(fa)) * 1.25)
+    ax.legend(frameon=False, fontsize=9)
+    plt.tight_layout()
+    plt.savefig(out("fig_intent_rooms.pdf"), bbox_inches="tight")
+    plt.close()
+    print("  fig_intent_rooms.pdf",
+          {lab: (c, f) for lab, c, f in zip(labels, ca, fa)})
+
+
+MIN_DAYS_VELOCITY = 7   # listings active at least this many days in the month
+
+
+def monthly_signals():
+    """Monthly supply and the four demand signals (views, view velocity, clicks,
+    saves), using the same gap-spreading as daily_demand_supply(): each pair of
+    consecutive snapshots a -> b (b - a <= MAX_GAP_DAYS) adds one active
+    listing-day to each day a+1 .. b and spreads its counter increments evenly
+    over them; increments after a longer absence are booked on the day the
+    listing reappears. Returns (M, per_listing_month)."""
+    s = P.sort_values(["listing_id", "snapshot_date"])[
+        ["listing_id", "snapshot_date", "views", "clicks", "favorites"]].copy()
+    g = s.groupby("listing_id")
+    s["gap"] = g.snapshot_date.diff().dt.days
+    s["dv"] = g.views.diff().clip(lower=0)
+    s["dc"] = g.clicks.diff().clip(lower=0)
+    s["df"] = g.favorites.diff().clip(lower=0)
+    late = s[s.gap > MAX_GAP_DAYS].copy()
+    late["month"] = late.snapshot_date.dt.to_period("M")
+    s = s[s.gap.between(1, MAX_GAP_DAYS)].reset_index(drop=True)
+    rep = s.loc[s.index.repeat(s.gap.astype(int))]
+    back = rep.groupby(level=0).cumcount()
+    rep = rep.assign(day=rep.snapshot_date - pd.to_timedelta(back, unit="D"),
+                     v=rep.dv / rep.gap, c=rep.dc / rep.gap, f=rep.df / rep.gap)
+    rep["month"] = rep.day.dt.to_period("M")
+    M = rep.groupby("month").agg(ld=("listing_id", "size"), ndays=("day", "nunique"),
+                                 views=("v", "sum"), clicks=("c", "sum"), saves=("f", "sum"))
+    lt = late.groupby("month")[["dv", "dc", "df"]].sum()
+    M["views"] = M.views.add(lt.dv, fill_value=0).reindex(M.index)
+    M["clicks"] = M.clicks.add(lt.dc, fill_value=0).reindex(M.index)
+    M["saves"] = M.saves.add(lt.df, fill_value=0).reindex(M.index)
+    M["supply"] = M.ld / M.ndays
+    M["views_pld"] = M.views / M.ld
+    M["views_pd"] = M.views / M.ndays
+    M["clicks_pk"] = M.clicks / M.ld * 1000
+    M["saves_pk"] = M.saves / M.ld * 1000
+    # per-listing velocity within the month (listings active >= MIN_DAYS_VELOCITY days)
+    pl = rep.groupby(["month", "listing_id"]).agg(days=("day", "nunique"), v=("v", "sum"))
+    pl = pl[pl.days >= MIN_DAYS_VELOCITY].copy()
+    pl["vpd"] = pl.v / pl.days
+    M["vpd_med"] = pl.groupby("month").vpd.median()
+    top = []
+    for m, grp in pl.groupby(level="month"):
+        q = grp.vpd.quantile(0.9)
+        t = grp[grp.vpd >= q]; r = grp[grp.vpd < q]
+        top.append(dict(month=m, top10_vpd=t.vpd.mean(), rest_vpd=r.vpd.mean(),
+                        top10_share=t.v.sum() / grp.v.sum() * 100))
+    M = M.join(pd.DataFrame(top).set_index("month"))
+    return M
+
+
+def _monthly_signal_fig(M, col_b, lab_b, fmt_b, col_c, lab_c, fmt_c, fname):
+    labels = [p.strftime("%B") for p in M.index]
+    x = np.arange(len(M))
+    fig, axs = plt.subplots(1, 3, figsize=(11, 3.9))
+    panels = [("supply", "(a)  Supply", "active listings (daily average)", "{:,.0f}"),
+              (col_b, "(b)  Demand", lab_b, fmt_b),
+              (col_c, "(c)  Demand / supply", lab_c, fmt_c)]
+    for ax, (col, title, ylab, fmt) in zip(axs, panels):
+        vals = M[col].to_numpy(float)
+        ax.plot(x, vals, color=TEAL, lw=2.2, marker="o", ms=8,
+                markeredgecolor="white", markeredgewidth=1.5, zorder=3)
+        for xi, v in zip(x, vals):
+            ax.annotate(fmt.format(v), (xi, v), xytext=(0, 9), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=9.5, fontweight="bold", color=INK)
+        ax.set_xticks(x); ax.set_xticklabels([l[:3] if len(M) > 3 else l for l in labels])
+        ax.set_xlim(-0.4, len(M) - 0.6)
+        ax.set_ylim(0, np.nanmax(vals) * 1.25)
+        ax.set_ylabel(ylab, fontsize=9)
+        ax.set_title(title, fontsize=10.5, fontweight="bold", loc="left")
+    plt.tight_layout()
+    plt.savefig(out(fname), bbox_inches="tight")
+    plt.close()
+    print(" ", fname)
+
+
+def build_monthly_signals():
+    """Figs 11-14 (paper v22) — supply, demand and their ratio by month for views,
+    view velocity, clicks and saves. Also writes monthly_signals.json with the
+    numbers quoted in the text."""
+    M = monthly_signals()
+    _monthly_signal_fig(M, "views", "new views in the month", "{:,.0f}",
+                        "views_pld", "new views per active listing-day", "{:.1f}",
+                        "fig_monthly_views.pdf")
+    _monthly_signal_fig(M, "views_pd", "new views per day, all listings", "{:,.0f}",
+                        "vpd_med", f"median new views / day per listing\n"
+                        f"(active ≥ {MIN_DAYS_VELOCITY} days in month)", "{:.1f}",
+                        "fig_monthly_velocity.pdf")
+    _monthly_signal_fig(M, "clicks", "clicks in the month", "{:,.0f}",
+                        "clicks_pk", "clicks per 1,000 active listing-days", "{:.1f}",
+                        "fig_monthly_clicks.pdf")
+    _monthly_signal_fig(M, "saves", "saves in the month", "{:,.0f}",
+                        "saves_pk", "saves per 1,000 active listing-days", "{:.1f}",
+                        "fig_monthly_saves.pdf")
+    M["ctr_per100"] = M.clicks / M.views * 100
+    rows = {p.strftime("%B %Y"): {k: (round(float(v), 3) if pd.notna(v) else None)
+                                  for k, v in r.items()} for p, r in M.iterrows()}
+    with open(out("monthly_signals.json"), "w", encoding="utf-8") as fh:
+        json.dump(rows, fh, indent=1)
+    print("  monthly_signals.json", json.dumps(rows))
+
+
 ALL_FIGURES = [
     build_concentration_apartments,
     build_s1_dimensions,
@@ -848,6 +983,8 @@ ALL_FIGURES = [
     build_demand_supply_monthly,
     build_clicks_supply_districts,
     build_saves_supply_districts,
+    build_intent_rooms,
+    build_monthly_signals,
 ]
 
 
