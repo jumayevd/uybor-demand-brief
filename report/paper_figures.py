@@ -3,7 +3,7 @@
 paper_figures.py — build the working paper's figures, frozen at a cut-off date.
 ==============================================================================
 
-    PANEL_START=2026-06-30 PANEL_END=2026-09-30 python paper_figures.py   # Q3 2026
+    PANEL_START=2026-06-30 PANEL_END=2026-10-31 python paper_figures.py   # July-October 2026
 
 Runs pipeline + figures_en on snapshots within [PANEL_START, PANEL_END], then copies the figures the
 paper uses into paper_figures/ under the paper's own numbering, as vector PDF
@@ -23,10 +23,10 @@ import pipeline
 
 OUT = os.path.join(os.path.dirname(__file__) or ".", "paper_figures")
 
-# (paper figure number, figure file, exported file stem, caption) — LaTeX draft of
-# 8 Oct 2026 (13 figures; the demand map is Figure 4). The exported stems are kept
-# stable because the LaTeX source includes them by name (e.g. Figure04_intent_*
-# is the paper's Figure 5); the paper's numbering lives only in the captions.
+# (paper figure number, figure file, exported file stem, caption) — draft v22
+# (16 figures). Stems of figures already in the LaTeX are kept unchanged (e.g.
+# Figure04_intent_* is the paper's Figure 5); new figures are named after their
+# v22 number. The paper's numbering lives only in the captions.
 PAPER = [
     (1, "fig_concentration_apartments", "Figure01_concentration_apartments",
      "Distribution of view velocity and concentration of attention"),
@@ -35,21 +35,34 @@ PAPER = [
     (4, "fig_demand_map", "Extra_demand_map", "Geographic distribution of demand reach in Tashkent"),
     (5, "fig_intent_norm_districts", "Figure04_intent_norm_districts",
      "Normalized purchase intent across districts"),
-    (6, "fig_s2_dimensions", "Figure05_s2_dimensions", "Purchase intent across market segments"),
+    (6, "fig_intent_rooms", "Figure06_intent_rooms", "Purchase intent by number of rooms"),
     (7, "fig_exit_apartments", "Figure06_exit_apartments",
      "Market exit probability and its (weak) association with demand"),
     (8, "fig_exit_dims", "Figure07_exit_dims", "Market exit probability across segments"),
     (9, "fig_tom_dims", "Figure08_tom_dims", "Time on market (apartments)"),
     (10, "fig_metrics_panel_apartments", "Figure09_metrics_panel_apartments",
      "Heatmap of the four demand signals"),
-    (11, "fig_dynamics_districts", "Figure10_dynamics_districts",
-     "Demand dynamics across the three months of Q3 2026 (July, August, September): "
-     "(a) demand reach and (b) click-through rate by district"),
-    (12, "fig_supply_demand_bands", "Figure11_supply_demand_bands",
+    (11, "fig_monthly_views", "Figure11_monthly_views",
+     "Supply, demand and their ratio measured by views, Tashkent, by month: (a) active listings, "
+     "daily average; (b) new views in the month; (c) new views per active listing-day"),
+    (12, "fig_monthly_velocity", "Figure12_monthly_velocity",
+     "Supply, demand and their ratio measured by view velocity, Tashkent, by month: (a) active "
+     "listings, daily average; (b) new views per day across all listings; (c) median new views "
+     "per day per listing (listings active at least 7 days in the month)"),
+    (13, "fig_monthly_clicks", "Figure13_monthly_clicks",
+     "Supply, demand and their ratio measured by clicks, Tashkent, by month: (a) active listings, "
+     "daily average; (b) clicks in the month; (c) clicks per 1,000 active listing-days"),
+    (14, "fig_monthly_saves", "Figure14_monthly_saves",
+     "Supply, demand and their ratio measured by saves, Tashkent, by month: (a) active listings, "
+     "daily average; (b) saves in the month; (c) saves per 1,000 active listing-days"),
+    (15, "fig_supply_demand_bands", "Figure11_supply_demand_bands",
      "Distribution of demand and supply across price segments"),
-    (13, "fig_tightness_districts", "Figure12_tightness_districts", "Market tightness across districts"),
+    (16, "fig_tightness_districts", "Figure12_tightness_districts", "Market tightness across districts"),
 ]
 EXTRA = [    # (figure file, caption) for figures built but not in the current draft
+    ("fig_s2_dimensions", "Purchase intent by room count and day of week (earlier draft)"),
+    ("fig_dynamics_districts",
+     "Demand dynamics by district and month: (a) demand reach and (b) click-through rate"),
     ("fig_demand_supply_monthly",
      "Supply, demand and the demand/supply ratio by month"),
     ("fig_clicks_supply_districts",
@@ -87,6 +100,8 @@ def main():
     with open(os.path.join(OUT, "captions.txt"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     shutil.copy(os.path.join(config.BUILD_DIR, "metrics.json"), os.path.join(OUT, "metrics.json"))
+    shutil.copy(os.path.join(figures_en.FIG_DIR, "monthly_signals.json"),
+                os.path.join(OUT, "monthly_signals.json"))
     print("[paper_figures]", lines[0])
     print(f"[paper_figures] {len(PAPER)} paper figures + {len(EXTRA)} extra -> {OUT}")
 

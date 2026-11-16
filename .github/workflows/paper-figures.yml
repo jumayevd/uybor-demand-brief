@@ -2,7 +2,7 @@
 name: uybor-paper-figures
 
 # Dispatch-only. Builds the working paper's figures on live data frozen at a
-# window (default Q3 2026: snapshots 30 Jun - 30 Sep = 1 July - 30 September) and uploads
+# window (default July-October 2026: snapshots 30 Jun - 31 Oct = 1 July - 31 October) and uploads
 # them, numbered as in the paper, as PDF + 300-DPI JPG. Posts to Telegram only
 # when the 'post' input is ticked.
 on:  # yamllint disable-line rule:truthy
@@ -15,7 +15,7 @@ on:  # yamllint disable-line rule:truthy
       end:
         description: "Last snapshot date to include (YYYY-MM-DD)"
         required: false
-        default: "2026-09-30"
+        default: "2026-10-31"
       post:
         description: "Post to the Telegram channel (one-off): none, paper (all figures in the draft), extra (built but not in the draft), all"
         type: choice

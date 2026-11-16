@@ -1,8 +1,8 @@
 ---
 name: uybor-timeseries
 
-# Dispatch-only. Pulls the live panel and builds the 3-month, district-wise
-# demand trend (24 Jun -> 24 Jul -> 24 Aug -> 24 Sep), uploading the tables
+# Dispatch-only. Pulls the live panel and builds the monthly, district-wise
+# demand trend (month ends 30 Jun -> 31 Jul -> ... -> 31 Oct), uploading the tables
 # (CSV + XLSX) and trend charts (PNG) as a downloadable artifact. No Telegram.
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch: {}
@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Pull latest v2, build 3-month district trends
+      - name: Pull latest v2, build monthly district trends
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           UYBOR_TABLE: ${{ vars.UYBOR_TABLE || 'uybor_listings_v2' }}

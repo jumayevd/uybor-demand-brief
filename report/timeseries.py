@@ -4,7 +4,7 @@ timeseries.py — monthly, district-wise demand trends (calendar months).
 ======================================================================
 
 Anchors the panel at month ends: snapshots dated 30 Jun -> 31 Jul -> 31 Aug ->
-30 Sep = July, August, September (Q3 2026). Snapshots are taken at ~01:00-04:00
+30 Sep -> 31 Oct = July, August, September, October 2026. Snapshots are taken at ~01:00-04:00
 Tashkent the day after their date, so each anchor closes its calendar month. For each
 month and district (plus an OVERALL row) it reports both the LEVEL at the anchor
 and the FLOW over the month, so the trend in views / velocity / clicks / saves
@@ -35,7 +35,7 @@ GREY, INK = "#9AA0A6", "#2b2b2b"
 OUT = os.path.join(os.path.dirname(__file__), "timeseries_out")
 os.makedirs(OUT, exist_ok=True)
 
-ANCHORS = ["2026-06-30", "2026-07-31", "2026-08-31", "2026-09-30"]
+ANCHORS = ["2026-06-30", "2026-07-31", "2026-08-31", "2026-09-30", "2026-10-31"]
 
 
 def load():
@@ -73,11 +73,15 @@ def resolve_anchors(df):
     out = []
     for t in ANCHORS:
         t = pd.Timestamp(t)
+        # month ends outside the panel window (e.g. 31 Oct when PANEL_END is
+        # 30 Sep) are skipped, not snapped onto the edge as an empty month
+        if t > avail[-1] + pd.Timedelta(days=3) or t < avail[0] - pd.Timedelta(days=3):
+            continue
         if (avail == t).any():
             out.append(t)
         else:                                   # nearest available snapshot
             out.append(avail[np.abs((avail - t).days).argmin()])
-    return out
+    return sorted(set(out))
 
 
 def level(df, t):
@@ -271,19 +275,19 @@ def main():
     # multi-horizon (3-period) comparison for each main monthly signal
     for metric, ylabel, title, fmt, fname, *opt in [
         ("vpd_med", "median new views / listing / day",
-         "View velocity by district — three-month comparison", "{:.1f}",
+         "View velocity by district — monthly comparison", "{:.1f}",
          "multihorizon_velocity.png"),
         ("new_views", "new views in the period",
-         "Reach (new views) by district — three-month comparison", "{:,.0f}",
+         "Reach (new views) by district — monthly comparison", "{:,.0f}",
          "multihorizon_reach.png", True),
         ("click_rate_pct", "% of listings with at least one click",
-         "Click incidence by district — three-month comparison", "{:.0f}",
+         "Click incidence by district — monthly comparison", "{:.0f}",
          "multihorizon_clicks.png"),
         ("save_rate_pct", "% of listings with at least one save",
-         "Save incidence by district — three-month comparison", "{:.0f}",
+         "Save incidence by district — monthly comparison", "{:.0f}",
          "multihorizon_saves.png"),
         ("ctr_pct", "clicks per 100 new views",
-         "Click-through rate by district — three-month comparison", "{:.2f}",
+         "Click-through rate by district — monthly comparison", "{:.2f}",
          "multihorizon_ctr.png"),
     ]:
         multihorizon(dist, metric, ylabel, title, fmt, fname, thousands=bool(opt and opt[0]))
