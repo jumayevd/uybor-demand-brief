@@ -13,7 +13,7 @@ on:  # yamllint disable-line rule:truthy
       end:
         description: "Last snapshot date to include (YYYY-MM-DD)"
         required: false
-        default: "2026-09-30"
+        default: "2026-10-31"
 
 permissions:
   contents: read

@@ -659,8 +659,8 @@ def build_hedonic_results():
 
 
 def build_dynamics_districts():
-    """Fig 10 (paper) — demand dynamics across three monthly windows
-    (calendar months of Q3 2026): (a) demand reach and (b) click-through rate."""
+    """Fig 10 (paper) — demand dynamics across monthly windows
+    (calendar months July-October 2026): (a) demand reach and (b) click-through rate."""
     import timeseries as TS
     anchors = TS.resolve_anchors(P)
     dropped = sorted(k for k, v in R["districts"].items()
@@ -672,7 +672,7 @@ def build_dynamics_districts():
     fig, (a1, a2) = plt.subplots(2, 1, figsize=(11, 8.4))
     # one hue, light -> dark in time order (as the single-colour gradients of Figs 8-9)
     style = dict(title_size=10.5, label_size=6.6, tick_size=8.4, legend_title=False,
-                 palette=["#a9cdd3", "#5c9ca6", "#1d5f6b"])
+                 palette=["#c4dfe3", "#7fb3bc", "#3a7f8b", "#16505b"])
     TS.draw_multihorizon(a1, dist, "new_views", "new views in the period",
                          "(a)  Demand reach by district", "{:,.0f}", thousands=True, **style)
     TS.draw_multihorizon(a2, dist, "ctr_pct", "clicks per 100 new views",
@@ -782,7 +782,7 @@ def build_intent_supply_districts(kind):
                      if v["nlist"] < config.MIN_DISTRICT_LISTINGS)
     D = D[~D.district_en.isin(dropped)]
     months = sorted(D.month.unique())
-    cols = ["#a9cdd3", "#5c9ca6", "#1d5f6b"][:len(months)]   # light -> dark in time
+    cols = ["#c4dfe3", "#7fb3bc", "#3a7f8b", "#16505b"][:len(months)]   # light -> dark in time
 
     def ratio(g):
         return g[kind].sum() / g.supply.sum() * 1000
@@ -809,7 +809,7 @@ def build_intent_supply_districts(kind):
     ax.set_title(f"{kind.capitalize()} per 1,000 active listings a day, by district",
                  fontsize=11, fontweight="bold", loc="left")
     ax.legend(frameon=False, fontsize=8.5, ncol=len(months), loc="upper right")
-    note = "Districts ordered by their Q3 value."
+    note = "Districts ordered by their value over the whole window."
     if kind == "saves":
         note += " Saves are rare, so district values rest on small counts."
     if dropped:
