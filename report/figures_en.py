@@ -51,14 +51,12 @@ def out(name):
 
 
 def kfmt(v):
-    """Compact label for large counts: 1.43M, 538K, 17.4K; below 10,000 as 1,592."""
+    """Compact label for large counts: 1.43M, 279k, 17k; below 10,000 as 1,592."""
     v = float(v); a = abs(v)
     if a >= 1e6:
         return f"{v / 1e6:.2f}M"
-    if a >= 1e5:
-        return f"{v / 1e3:.0f}K"
     if a >= 1e4:
-        return f"{v / 1e3:.1f}K"
+        return f"{v / 1e3:.0f}k"
     return f"{v:,.0f}"
 
 
