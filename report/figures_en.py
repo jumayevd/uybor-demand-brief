@@ -60,14 +60,26 @@ def kfmt(v):
     return f"{v:,.0f}"
 
 
-def _klabel(fmt, v):
-    return kfmt(v) if fmt == "K" else fmt.format(v)
+def _klabel(fmt, v, top=None):
+    """fmt "K": one unit per panel - if the panel's largest value is >= 10,000,
+    every label is in k (279k; 17.4k / 9.0k when the panel stays below 100k)."""
+    if fmt != "K":
+        return fmt.format(v)
+    top = abs(v) if top is None else top
+    if top >= 1e6:
+        return f"{v / 1e6:.2f}M"
+    if top >= 1e5:
+        return f"{v / 1e3:.0f}k"
+    if top >= 1e4:
+        return f"{v / 1e3:.1f}k"
+    return f"{v:,.0f}"
 
 
 def _kaxis(ax, vals):
     if np.nanmax(vals) >= 1e4:
         from matplotlib.ticker import FuncFormatter
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda t, _: kfmt(t)))
+        ax.yaxis.set_major_formatter(
+            FuncFormatter(lambda t, _: f"{t / 1e3:g}k" if t else "0"))
 
 
 def build_concentration_apartments():
@@ -777,7 +789,7 @@ def build_demand_supply_monthly():
         ax.plot(x, vals, color=TEAL, lw=2.2, marker="o", ms=8,
                 markeredgecolor="white", markeredgewidth=1.5, zorder=3)
         for xi, v in zip(x, vals):
-            ax.annotate(_klabel(fmt, v), (xi, v), xytext=(0, 9), textcoords="offset points",
+            ax.annotate(_klabel(fmt, v, np.nanmax(vals)), (xi, v), xytext=(0, 9), textcoords="offset points",
                         ha="center", va="bottom", fontsize=10, fontweight="bold", color=INK)
         ax.set_xticks(x); ax.set_xticklabels(labels)
         ax.set_xlim(-0.4, len(M) - 0.6)
@@ -947,7 +959,7 @@ def _monthly_signal_fig(M, col_b, lab_b, fmt_b, col_c, lab_c, fmt_c, fname):
         ax.plot(x, vals, color=TEAL, lw=2.2, marker="o", ms=8,
                 markeredgecolor="white", markeredgewidth=1.5, zorder=3)
         for xi, v in zip(x, vals):
-            ax.annotate(_klabel(fmt, v), (xi, v), xytext=(0, 9), textcoords="offset points",
+            ax.annotate(_klabel(fmt, v, np.nanmax(vals)), (xi, v), xytext=(0, 9), textcoords="offset points",
                         ha="center", va="bottom", fontsize=9.5, fontweight="bold", color=INK)
         ax.set_xticks(x); ax.set_xticklabels([l[:3] if len(M) > 3 else l for l in labels])
         ax.set_xlim(-0.4, len(M) - 0.6)
