@@ -50,6 +50,28 @@ def out(name):
     return os.path.join(FIG_DIR, name)
 
 
+def kfmt(v):
+    """Compact label for large counts: 1.43M, 538K, 17.4K; below 10,000 as 1,592."""
+    v = float(v); a = abs(v)
+    if a >= 1e6:
+        return f"{v / 1e6:.2f}M"
+    if a >= 1e5:
+        return f"{v / 1e3:.0f}K"
+    if a >= 1e4:
+        return f"{v / 1e3:.1f}K"
+    return f"{v:,.0f}"
+
+
+def _klabel(fmt, v):
+    return kfmt(v) if fmt == "K" else fmt.format(v)
+
+
+def _kaxis(ax, vals):
+    if np.nanmax(vals) >= 1e4:
+        from matplotlib.ticker import FuncFormatter
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda t, _: kfmt(t)))
+
+
 def build_concentration_apartments():
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.3))
     v = L.vpd.values
@@ -631,7 +653,7 @@ def build_hedonic_results():
     a1.set_title("(a)  Paid promotion multiplies daily views",
                  fontsize=11, fontweight="bold", loc="left")
     a1.text(0.5, max(vals) * 1.1,
-            f"n = {h['n_obs']:,} listing-days, {h['n_listings']:,} apartments; "
+            f"n = {kfmt(h['n_obs'])} listing-days, {h['n_listings']:,} apartments; "
             f"{h['promo_share']:.0f}% promoted",
             ha="center", fontsize=7.6, color=GREY)
 
@@ -748,8 +770,8 @@ def build_demand_supply_monthly():
     labels = [p.strftime("%B") for p in M.index]
     x = np.arange(len(M))
     fig, axs = plt.subplots(1, 3, figsize=(11, 3.9))
-    panels = [("supply", "(a)  Supply", "active listings (daily average)", "{:,.0f}"),
-              ("demand", "(b)  Demand", "clicks + saves in the month", "{:,.0f}"),
+    panels = [("supply", "(a)  Supply", "active listings (daily average)", "K"),
+              ("demand", "(b)  Demand", "clicks + saves in the month", "K"),
               ("ratio", "(c)  Demand / supply", "clicks + saves per 1,000 listings a day",
                "{:.1f}")]
     for ax, (col, title, ylab, fmt) in zip(axs, panels):
@@ -757,11 +779,12 @@ def build_demand_supply_monthly():
         ax.plot(x, vals, color=TEAL, lw=2.2, marker="o", ms=8,
                 markeredgecolor="white", markeredgewidth=1.5, zorder=3)
         for xi, v in zip(x, vals):
-            ax.annotate(fmt.format(v), (xi, v), xytext=(0, 9), textcoords="offset points",
+            ax.annotate(_klabel(fmt, v), (xi, v), xytext=(0, 9), textcoords="offset points",
                         ha="center", va="bottom", fontsize=10, fontweight="bold", color=INK)
         ax.set_xticks(x); ax.set_xticklabels(labels)
         ax.set_xlim(-0.4, len(M) - 0.6)
         ax.set_ylim(0, vals.max() * 1.25)
+        _kaxis(ax, vals)
         ax.set_ylabel(ylab, fontsize=9)
         ax.set_title(title, fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
@@ -918,7 +941,7 @@ def _monthly_signal_fig(M, col_b, lab_b, fmt_b, col_c, lab_c, fmt_c, fname):
     labels = [p.strftime("%B") for p in M.index]
     x = np.arange(len(M))
     fig, axs = plt.subplots(1, 3, figsize=(11, 3.9))
-    panels = [("supply", "(a)  Supply", "active listings (daily average)", "{:,.0f}"),
+    panels = [("supply", "(a)  Supply", "active listings (daily average)", "K"),
               (col_b, "(b)  Demand", lab_b, fmt_b),
               (col_c, "(c)  Demand / supply", lab_c, fmt_c)]
     for ax, (col, title, ylab, fmt) in zip(axs, panels):
@@ -926,11 +949,12 @@ def _monthly_signal_fig(M, col_b, lab_b, fmt_b, col_c, lab_c, fmt_c, fname):
         ax.plot(x, vals, color=TEAL, lw=2.2, marker="o", ms=8,
                 markeredgecolor="white", markeredgewidth=1.5, zorder=3)
         for xi, v in zip(x, vals):
-            ax.annotate(fmt.format(v), (xi, v), xytext=(0, 9), textcoords="offset points",
+            ax.annotate(_klabel(fmt, v), (xi, v), xytext=(0, 9), textcoords="offset points",
                         ha="center", va="bottom", fontsize=9.5, fontweight="bold", color=INK)
         ax.set_xticks(x); ax.set_xticklabels([l[:3] if len(M) > 3 else l for l in labels])
         ax.set_xlim(-0.4, len(M) - 0.6)
         ax.set_ylim(0, np.nanmax(vals) * 1.25)
+        _kaxis(ax, vals)
         ax.set_ylabel(ylab, fontsize=9)
         ax.set_title(title, fontsize=10.5, fontweight="bold", loc="left")
     plt.tight_layout()
@@ -944,17 +968,17 @@ def build_monthly_signals():
     view velocity, clicks and saves. Also writes monthly_signals.json with the
     numbers quoted in the text."""
     M = monthly_signals()
-    _monthly_signal_fig(M, "views", "new views in the month", "{:,.0f}",
+    _monthly_signal_fig(M, "views", "new views in the month", "K",
                         "views_pld", "new views per active listing-day", "{:.1f}",
                         "fig_monthly_views.pdf")
-    _monthly_signal_fig(M, "views_pd", "new views per day, all listings", "{:,.0f}",
+    _monthly_signal_fig(M, "views_pd", "new views per day, all listings", "K",
                         "vpd_med", f"median new views / day per listing\n"
                         f"(active ≥ {MIN_DAYS_VELOCITY} days in month)", "{:.1f}",
                         "fig_monthly_velocity.pdf")
-    _monthly_signal_fig(M, "clicks", "clicks in the month", "{:,.0f}",
+    _monthly_signal_fig(M, "clicks", "clicks in the month", "K",
                         "clicks_pk", "clicks per 1,000 active listing-days", "{:.1f}",
                         "fig_monthly_clicks.pdf")
-    _monthly_signal_fig(M, "saves", "saves in the month", "{:,.0f}",
+    _monthly_signal_fig(M, "saves", "saves in the month", "K",
                         "saves_pk", "saves per 1,000 active listing-days", "{:.1f}",
                         "fig_monthly_saves.pdf")
     M["ctr_per100"] = M.clicks / M.views * 100

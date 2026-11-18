@@ -171,10 +171,10 @@ def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
 
     Bars are monthly FLOWS between month-end anchors, so each is labelled by the
     calendar month it covers (the anchor's month, e.g. July). thousands=True
-    labels values as e.g. "199k".
+    labels values as e.g. "199K".
     """
     def lab(v):
-        return f"{v / 1000:.0f}k" if thousands else fmt.format(v)
+        return f"{v / 1000:.0f}K" if thousands else fmt.format(v)
     d = dist_df[dist_df[metric].notna()].copy()
     d["anchor_date"] = pd.to_datetime(d.anchor_date)
     d["period"] = d.anchor_date.dt.strftime("%B")
@@ -195,7 +195,7 @@ def draw_multihorizon(ax, dist_df, metric, ylabel, title, fmt, thousands=False,
     ax.set_xticks(x); ax.set_xticklabels(dists, rotation=32, ha="right", fontsize=tick_size)
     ax.set_ylabel(ylabel); ax.set_ylim(0, np.nanmax(piv.values) * 1.16)
     if thousands:
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v / 1000:.0f}k"))
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v / 1000:.0f}K"))
     ax.set_title(title, fontsize=title_size, fontweight="bold", loc="left")
     if legend_title:
         ax.legend(frameon=False, fontsize=10, ncol=len(order), loc="upper right",
