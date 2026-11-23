@@ -25,6 +25,33 @@ mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["axes.spines.top"] = False
 mpl.rcParams["axes.spines.right"] = False
 
+# Paper figures carry no titles inside the image (the caption in the paper does
+# that job). Before every save, figure suptitles are dropped and axes titles are
+# cut back to their panel letter: "(a)  Supply" -> "(a)", a plain title -> "".
+import re as _re
+_PANEL = _re.compile(r"^\s*(\([a-z]\))")
+_savefig = plt.savefig
+
+
+def _strip_titles(fig):
+    if getattr(fig, "_suptitle", None) is not None:
+        fig._suptitle.set_text("")
+    for ax in fig.axes:
+        for loc in ("left", "center", "right"):
+            t = ax.get_title(loc=loc)
+            if t:
+                m = _PANEL.match(t)
+                ax.set_title(m.group(1) if m else "", loc=loc,
+                             fontsize=10.5, fontweight="bold")
+
+
+def _savefig_untitled(*args, **kw):
+    _strip_titles(plt.gcf())
+    return _savefig(*args, **kw)
+
+
+plt.savefig = _savefig_untitled
+
 GOLD, TEAL, RUST, PURP = "#C8A15A", "#2E7D8A", "#B24C3C", "#6B5B95"
 GREY, INK = "#9AA0A6", "#2b2b2b"
 AVG = "#444444"
